@@ -75,7 +75,9 @@ jobs:
 
       - name: Get Changelog
         id: notes
-        run: echo 'NOTES=$(cat CHANGELOG)' >> $GITHUB_OUTPUT
+        run: |
+          NOTE=$(cat CHANGELOG)
+          echo 'NOTES=$NOTE' >> $GITHUB_OUTPUT
 
       - name: Create release
         id: create_release
