@@ -9,7 +9,7 @@ try:
     from PIL import Image, ImageFile
     from plexapi.exceptions import BadRequest, NotFound, Unauthorized
     from plexapi.server import PlexServer
-    from plexapi.video import Movie, Show
+    from plexapi.video import Movie, Show, Season, Episode
     from tmdbapis import TMDbAPIs, TMDbException
 except (ModuleNotFoundError, ImportError):
     print("Requirements Error: Requirements are not installed")
@@ -84,25 +84,32 @@ try:
     if not overlay_images:
         raise Failed(f"Images Error: overlays Folder Images not found {os.path.abspath(os.path.join(overlay_directory, '*.png'))}")
 
-    def detect_overlay_in_image(img_path):
+    def detect_overlay_in_image(poster_source, img_path=None, url_path=None):
+        out_path = img_path
+        if url_path:
+            img_path = util.download_image(url_path)
+            out_path = url_path
         with Image.open(img_path) as pil_image:
             exif_tags = pil_image.getexif()
         if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
-            logger.info(f"EXIF Overlay Tag Error: Ignoring {img_path}")
+            logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
             return True
 
         target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         if target is None:
-            logging.error(f"Image Error: Cannot Read {img_path} - incorrect sRGB profile")
+            logger.error(f"Image Load Error: {poster_source}: {out_path}")
+            return False
+        if target.shape[0] < 500 or target.shape[1] < 500:
+            logger.error(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
             return False
         for overlay_image in overlay_images:
             overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE)
             if overlay is None:
-                logging.error(f"Image Error: Cannot Read {overlay_image} - incorrect sRGB profile")
+                logger.error(f"Image Load Error: {overlay_image}")
                 continue
 
             if overlay.shape[0] > target.shape[0] or overlay.shape[1] > target.shape[1]:
-                logging.error(f"Image Error: {overlay_image} is larger than {img_path}")
+                logger.error(f"Image Error: {overlay_image} is larger than {poster_source}: {out_path}")
                 continue
 
             template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED)
@@ -110,7 +117,7 @@ try:
 
             if len(loc[0]) == 0:
                 continue
-            logging.info(f"Overlay Detected: {overlay_image} found in {img_path} with score {template_result.max()}")
+            logger.debug(f"Overlay Detected: {overlay_image} found in {poster_source}: {out_path} with score {template_result.max()}")
             return True
         return False
 
@@ -140,27 +147,30 @@ try:
             if len(asset_matches) > 0:
                 poster_source = "asset"
                 poster_path = asset_matches[0]
+            else:
+                logger.info("No Asset Found")
 
         # Check Original Folder
         if not poster_source and choices["original"]:
             png = os.path.join(choices["original"], f"{plex_item.ratingKey}.png")
             jpg = os.path.join(choices["original"], f"{plex_item.ratingKey}.jpg")
-            if os.path.exists(png) and detect_overlay_in_image(png) is False:
+            if os.path.exists(png) and detect_overlay_in_image("Original Poster", img_path=png) is False:
                 poster_source = "original"
                 poster_path = png
-            elif os.path.exists(jpg) and detect_overlay_in_image(jpg) is False:
+            elif os.path.exists(jpg) and detect_overlay_in_image("Original Poster", img_path=jpg) is False:
                 poster_source = "original"
                 poster_path = jpg
+            else:
+                logger.info("No Original Found")
 
         # Check Plex
         if not poster_source:
             plex_image_url = None
-            for plex_poster in plex_item.posters():
+            for p, plex_poster in enumerate(plex_item.posters(), 1):
                 if plex_poster.key.startswith("/"):
                     plex_image_url = f"{choices['url']}{plex_poster.key}&X-Plex-Token={choices['token']}"
                     if plex_poster.ratingKey.startswith("upload"):
-                        download_image_path = util.download_image(plex_image_url)
-                        if detect_overlay_in_image(download_image_path) is not False:
+                        if detect_overlay_in_image(f"Plex Poster {p}", url_path=plex_image_url) is not False:
                             continue
                 else:
                     plex_image_url = plex_poster.key
@@ -168,11 +178,16 @@ try:
             if plex_image_url:
                 poster_source = "plex"
                 poster_path = plex_image_url
+            else:
+                logger.into("No Clean Plex Image Found")
 
         # TMDb
-        if not poster_source and tmdb_poster_url:
-            poster_source = "tmdb"
-            poster_path = tmdb_poster_url
+        if not poster_source:
+            if tmdb_poster_url:
+                poster_source = "tmdb"
+                poster_path = tmdb_poster_url
+            else:
+                logger.into("No TMDb Image Found")
 
         # Upload poster and Remove "Overlay" Label
         if poster_source:
@@ -183,7 +198,7 @@ try:
                     plex_item.uploadPoster(url=poster_path)
                 else:
                     plex_item.uploadPoster(filepath=poster_path)
-            logger.info("Poster Reset")
+            logger.info("Poster Successfully Reset")
             if "Overlay" in [la.tag for la in plex_item.labels]:
                 if not choices["dry"]:
                     plex_item.removeLabel("Overlay")
@@ -191,12 +206,29 @@ try:
         else:
             logger.error("Image Error: No Image Found to Restore")
 
+    def get_title(plex_item):
+        if isinstance(plex_item, Movie):
+            return f"Movie: {item.title}"
+        elif isinstance(plex_item, Show):
+            return f"Show: {item.title}"
+        elif isinstance(plex_item, Season):
+            if season.title == f"Season {season.seasonNumber}":
+                return season.title
+            return f"Season {season.seasonNumber}: {season.title}"
+        elif isinstance(plex_item, Episode):
+            return f"Episode {episode.seasonEpisode.upper()}: {episode.title}"
+        else:
+            return f"Item: {item.title}"
+
     def reload(plex_item):
-        plex_item.reload(checkFiles=False, includeAllConcerts=False, includeBandwidths=False, includeChapters=False,
-                         includeChildren=False, includeConcerts=False, includeExternalMedia=False, includeExtras=False,
-                         includeFields=False, includeGeolocation=False, includeLoudnessRamps=False, includeMarkers=False,
-                         includeOnDeck=False, includePopularLeaves=False, includeRelated=False, includeRelatedCount=0,
-                         includeReviews=False, includeStations=False)
+        try:
+            plex_item.reload(checkFiles=False, includeAllConcerts=False, includeBandwidths=False, includeChapters=False,
+                             includeChildren=False, includeConcerts=False, includeExternalMedia=False, includeExtras=False,
+                             includeFields=False, includeGeolocation=False, includeLoudnessRamps=False, includeMarkers=False,
+                             includeOnDeck=False, includePopularLeaves=False, includeRelated=False, includeRelatedCount=0,
+                             includeReviews=False, includeStations=False)
+        except (BadRequest, NotFound) as e1:
+            raise Failed(f"Plex Error: {get_title(plex_item)} Failed to Load: {e1}")
 
     if choices["resume"]:
         logger.info(f'Resume From "{choices["resume"]}"')
@@ -211,8 +243,8 @@ try:
         logger.info(f"Resetting {i + 1}/{total_items} {item.title}")
         try:
             reload(item)
-        except (BadRequest, NotFound) as e:
-            logger.error(f"Plex Error: Item: {item.title} Failed to Load: {e}")
+        except Failed as e:
+            logger.error(e)
             continue
 
         # Find Item's PMM Asset Directory
@@ -315,8 +347,8 @@ try:
                     logger.info(f"Resetting {item.title} Season {season.seasonNumber}: {season.title}")
                     try:
                         reload(season)
-                    except (BadRequest, NotFound) as e:
-                        logger.error(f"Plex Error: Season {season.seasonNumber}: {season.title} Failed to Load: {e}")
+                    except Failed as e:
+                        logger.error(e)
                         continue
                     tmdb_poster = tmdb_seasons[season.seasonNumber].poster_url if season.seasonNumber in tmdb_seasons else None
                     file_name = f"Season{'0' if not season.seasonNumber or season.seasonNumber < 10 else ''}{season.seasonNumber}"
@@ -325,6 +357,12 @@ try:
                     logger.info(f"Run Time: {str(datetime.now() - start_time).split('.')[0]}")
 
                 if choices["episode"]:
+                    if not choices["season"]:
+                        try:
+                            reload(season)
+                        except Failed as e:
+                            logger.error(e)
+                            continue
                     tmdb_episodes = {}
                     if season.seasonNumber in tmdb_seasons:
                         for episode in tmdb_seasons[season.seasonNumber].episodes:
@@ -340,8 +378,8 @@ try:
                         logger.info(f"Resetting {item.title} Episode {episode.seasonEpisode.upper()}: {episode.title}")
                         try:
                             reload(episode)
-                        except (BadRequest, NotFound) as e:
-                            logger.error(f"Plex Error: Episode {episode.seasonEpisode.upper()}: {episode.title} Failed to Load: {e}")
+                        except Failed as e:
+                            logger.error(e)
                             continue
                         tmdb_poster = tmdb_episodes[episode.episodeNumber].still_url if episode.episodeNumber in tmdb_episodes else None
                         file_name = episode.seasonEpisode.upper()
