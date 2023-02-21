@@ -42,15 +42,15 @@ jobs:
             "BRANCH_NAME=develop"
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/pmm-overlay-reset:develop
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:develop
 
       - name: Send Discord Commit Notification
         uses: meisnate12/discord-notifications@master
         with:
           webhook_id: ${{ secrets.DEVELOP_WEBHOOK_ID }}
           webhook_token: ${{ secrets.DEVELOP_WEBHOOK_TOKEN }}
-          title: PMM Overlay Reset Develop Commits
-          message: "<@&954835263731949623> - An update to PMM Overlay Reset has been published and is available to users of the **develop** branch."
+          title: ${{ secrets.NAME }} Develop Commits
+          message: "<@&954835263731949623> - An update to ${{ secrets.NAME }} has been published and is available to users of the **develop** branch."
           commits: "true"
           username: Metabot
           avatar_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/develop/.github/pmm.png
@@ -62,10 +62,10 @@ jobs:
           webhook_id: ${{ secrets.BUILD_WEBHOOK_ID }}
           webhook_token: ${{ secrets.BUILD_WEBHOOK_TOKEN }}
           title: "develop build: **Success**"
-          url: https://github.com/meisnate12/PMM-Overlay-Reset/actions/runs/${{ github.run_id }}
+          url: https://github.com/meisnate12/${{ secrets.GITHUB }}/actions/runs/${{ github.run_id }}
           username: Metabot
           avatar_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/develop/.github/pmm.png
-          author: PMM Overlay Reset Docker
+          author: ${{ secrets.NAME }} Docker
           author_icon_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/develop/.github/docker.png
 
       - name: Discord Failure Notification
@@ -76,8 +76,8 @@ jobs:
           webhook_token: ${{ secrets.BUILD_WEBHOOK_TOKEN }}
           title: "develop build: **Failure**"
           color: 0xe30c43
-          url: https://github.com/meisnate12/PMM-Overlay-Reset/actions/runs/${{ github.run_id }}
+          url: https://github.com/meisnate12/${{ secrets.GITHUB }}/actions/runs/${{ github.run_id }}
           username: Metabot
           avatar_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/develop/.github/pmm.png
-          author: PMM Overlay Reset Docker
+          author: ${{ secrets.NAME }} Docker
           author_icon_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/develop/.github/docker.png

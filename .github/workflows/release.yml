@@ -17,7 +17,7 @@ jobs:
           webhook_id: ${{ secrets.RELEASE_WEBHOOK_ID }}
           webhook_token: ${{ secrets.RELEASE_WEBHOOK_TOKEN }}
           release: true
-          title: PMM Overlay Reset Release VERSION
-          message: "<@&967002324646113290> - A new version of PMM Overlay Reset has been released and is available to all users"
+          title: ${{ secrets.NAME }} Release VERSION
+          message: "<@&967002324646113290> - A new version of ${{ secrets.NAME }} has been released and is available to all users"
           username: Metabot
           avatar_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/master/.github/pmm.png

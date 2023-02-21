@@ -36,7 +36,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/pmm-overlay-reset:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_REPO }}:latest
 
       - name: Discord Success Notification
         uses: meisnate12/discord-notifications@master
@@ -45,10 +45,10 @@ jobs:
           webhook_id: ${{ secrets.BUILD_WEBHOOK_ID }}
           webhook_token: ${{ secrets.BUILD_WEBHOOK_TOKEN }}
           title: "latest build: **Success**"
-          url: https://github.com/meisnate12/PMM-Overlay-Reset/actions/runs/${{ github.run_id }}
+          url: https://github.com/meisnate12/${{ secrets.GITHUB }}/actions/runs/${{ github.run_id }}
           username: Metabot
           avatar_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/master/.github/pmm.png
-          author: PMM Overlay Reset Docker
+          author: ${{ secrets.NAME }} Docker
           author_icon_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/master/.github/docker.png
 
       - name: Discord Failure Notification
@@ -59,8 +59,8 @@ jobs:
           webhook_token: ${{ secrets.BUILD_WEBHOOK_TOKEN }}
           title: "latest build: **Failure**"
           color: 0xe30c43
-          url: https://github.com/meisnate12/PMM-Overlay-Reset/actions/runs/${{ github.run_id }}
+          url: https://github.com/meisnate12/${{ secrets.GITHUB }}/actions/runs/${{ github.run_id }}
           username: Metabot
           avatar_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/master/.github/pmm.png
-          author: PMM Overlay Reset Docker
+          author: ${{ secrets.NAME }} Docker
           author_icon_url: https://raw.githubusercontent.com/meisnate12/Plex-Meta-Manager/master/.github/docker.png
