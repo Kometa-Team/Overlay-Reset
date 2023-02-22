@@ -22,27 +22,28 @@ if sys.version_info[0] != 3 or sys.version_info[1] < 11:
     sys.exit(0)
 
 options = [
-    {"arg": "u",  "key": "url",      "env": "PLEX_URL",     "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
-    {"arg": "t",  "key": "token",    "env": "PLEX_TOKEN",   "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
-    {"arg": "l",  "key": "library",  "env": "PLEX_LIBRARY", "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
-    {"arg": "a",  "key": "asset",    "env": "PMM_ASSET",    "type": "str",  "default": None,  "help": "PMM Asset Folder to Scan for restoring posters."},
-    {"arg": "o",  "key": "original", "env": "PMM_ORIGINAL", "type": "str",  "default": None,  "help": "PMM Original Folder to Scan for restoring posters."},
-    {"arg": "ta", "key": "tmdbapi",  "env": "TMDBAPI",      "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
-    {"arg": "re", "key": "resume",   "env": "RESUME",       "type": "str",  "default": None,  "help": "Plex Item Title to Resume restoring posters from."},
-    {"arg": "di", "key": "discord",  "env": "DISCORD",      "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
-    {"arg": "ti", "key": "timeout",  "env": "TIMEOUT",      "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
-    {"arg": "d",  "key": "dry",      "env": "DRY_RUN",      "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
-    {"arg": "f",  "key": "flat",     "env": "PMM_FLAT",     "type": "bool", "default": False, "help": "PMM Asset Folder uses Flat Assets Image Paths."},
-    {"arg": "s",  "key": "season",   "env": "SEASON",       "type": "bool", "default": False, "help": "Restore Season posters during run."},
-    {"arg": "e",  "key": "episode",  "env": "EPISODE",      "type": "bool", "default": False, "help": "Restore Episode posters during run."},
-    {"arg": "tr", "key": "trace",    "env": "TRACE",        "type": "bool", "default": False, "help": "Run with every request logged."}
+    {"arg": "u",  "key": "url",          "env": "PLEX_URL",     "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
+    {"arg": "t",  "key": "token",        "env": "PLEX_TOKEN",   "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
+    {"arg": "l",  "key": "library",      "env": "PLEX_LIBRARY", "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
+    {"arg": "a",  "key": "asset",        "env": "PMM_ASSET",    "type": "str",  "default": None,  "help": "PMM Asset Folder to Scan for restoring posters."},
+    {"arg": "o",  "key": "original",     "env": "PMM_ORIGINAL", "type": "str",  "default": None,  "help": "PMM Original Folder to Scan for restoring posters."},
+    {"arg": "ta", "key": "tmdbapi",      "env": "TMDBAPI",      "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
+    {"arg": "re", "key": "resume",       "env": "RESUME",       "type": "str",  "default": None,  "help": "Plex Item Title to Resume restoring posters from."},
+    {"arg": "di", "key": "discord",      "env": "DISCORD",      "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
+    {"arg": "ti", "key": "timeout",      "env": "TIMEOUT",      "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
+    {"arg": "d",  "key": "dry",          "env": "DRY_RUN",      "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
+    {"arg": "f",  "key": "flat",         "env": "PMM_FLAT",     "type": "bool", "default": False, "help": "PMM Asset Folder uses Flat Assets Image Paths."},
+    {"arg": "s",  "key": "season",       "env": "SEASON",       "type": "bool", "default": False, "help": "Restore Season posters during run."},
+    {"arg": "e",  "key": "episode",      "env": "EPISODE",      "type": "bool", "default": False, "help": "Restore Episode posters during run."},
+    {"arg": "tr", "key": "trace",        "env": "TRACE",        "type": "bool", "default": False, "help": "Run with extra trace logs."},
+    {"arg": "lr", "key": "log-requests", "env": "LOG_REQUESTS", "type": "bool", "default": False, "help": "Run with every request logged."}
 ]
 script_name = "PMM Overlay Reset"
 base_dir = os.path.dirname(os.path.abspath(__file__))
 config_dir = os.path.join(base_dir, "config")
 
 pmmargs = PMMArgs("meisnate12/PMM-Overlay-Reset", base_dir, options, use_nightly=False)
-logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], is_trace=pmmargs["trace"], log_requests=pmmargs["trace"])
+logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], is_trace=pmmargs["trace"], log_requests=pmmargs["log-requests"])
 logger.secret([pmmargs["url"], pmmargs["discord"], pmmargs["tmdbapi"], pmmargs["token"], quote(str(pmmargs["url"])), requests.utils.urlparse(pmmargs["url"]).netloc])
 requests.Session.send = util.update_send(requests.Session.send, pmmargs["timeout"])
 plexapi.BASE_HEADERS["X-Plex-Client-Identifier"] = pmmargs.uuid
@@ -162,22 +163,15 @@ try:
         return False
 
     def reset_from_plex(item_title, item_with_posters):
-        plex_image_url = None
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
             logger.trace(plex_poster.key)
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
                     if not detect_overlay_in_image(item_title, f"Plex Poster {p}", url_path=temp_url):
-                        plex_image_url = temp_url
+                        return temp_url
             else:
-                plex_image_url = plex_poster.key
-            if plex_image_url:
-                break
-        if plex_image_url:
-            return "Plex", plex_image_url
-        else:
-            return None, None
+                return plex_poster.key
 
     def reset_poster(item_title, plex_item, tmdb_poster_url, asset_directory, asset_file_name, parent=None):
         poster_source = None
@@ -207,8 +201,10 @@ try:
 
         # Check Plex
         if not poster_source:
-            poster_source, poster_path = reset_from_plex(item_title, plex_item)
-            if poster_source:
+            poster_path = reset_from_plex(item_title, plex_item)
+            if poster_path:
+                poster_source = "Plex"
+            else:
                 logger.info("No Clean Plex Image Found")
 
         # TMDb
@@ -221,24 +217,24 @@ try:
 
         # Check Item's Show
         if not poster_source and parent:
-            poster_source, poster_path = reset_from_plex(item_title, parent)
-            if poster_source:
-                logger.info("No Clean Plex Show Image Found")
+            poster_path = reset_from_plex(item_title, parent)
+            if poster_path:
                 poster_source = "Plex's Show"
+            else:
+                logger.info("No Clean Plex Show Image Found")
 
         # Upload poster and Remove "Overlay" Label
         if poster_source:
-            logger.info(f"Image Source: {poster_source}")
-            logger.info(f"Image Path: {poster_path}")
-            if not pmmargs["dry"]:
-                if poster_source in ["TMDb", "Plex", "Plex's Show"]:
+            logger.info(f"Reset From {poster_source}")
+            is_url = poster_source in ["TMDb", "Plex", "Plex's Show"]
+            if pmmargs["dry"]:
+                logger.info(f"Poster will be Reset by {'URL' if is_url else 'File'}")
+            else:
+                logger.info(f"{'URL' if is_url else 'File'} Path: {poster_path}")
+                if is_url:
                     plex_item.uploadPoster(url=poster_path)
                 else:
                     plex_item.uploadPoster(filepath=poster_path)
-                logger.info("Poster Successfully Reset")
-            else:
-                logger.info("Poster will be Reset")
-
             if "Overlay" in [la.tag for la in plex_item.labels]:
                 if not pmmargs["dry"]:
                     plex_item.removeLabel("Overlay")
