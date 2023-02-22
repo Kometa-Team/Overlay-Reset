@@ -164,6 +164,7 @@ try:
     def reset_from_plex(item_title, item_with_posters):
         plex_image_url = None
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
+            logger.trace(plex_poster.key)
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
@@ -177,7 +178,6 @@ try:
         if plex_image_url:
             return "Plex", plex_image_url
         else:
-            logger.info("No Clean Plex Image Found")
             return None, None
 
     def reset_poster(item_title, plex_item, tmdb_poster_url, asset_directory, asset_file_name, parent=None):
@@ -209,6 +209,8 @@ try:
         # Check Plex
         if not poster_source:
             poster_source, poster_path = reset_from_plex(item_title, plex_item)
+            if poster_source:
+                logger.info("No Clean Plex Image Found")
 
         # TMDb
         if not poster_source:
@@ -222,6 +224,7 @@ try:
         if not poster_source and parent:
             poster_source, poster_path = reset_from_plex(item_title, parent)
             if poster_source:
+                logger.info("No Clean Plex Show Image Found")
                 poster_source = "Plex's Show"
 
         # Upload poster and Remove "Overlay" Label
