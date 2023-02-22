@@ -206,8 +206,6 @@ try:
         # Check Plex
         if not poster_source:
             poster_source, poster_path = reset_from_plex(item_title, plex_item)
-            if poster_source:
-                poster_source = "Plex's Show"
 
         # TMDb
         if not poster_source:
@@ -220,6 +218,8 @@ try:
         # Check Item's Show
         if not poster_source and parent:
             poster_source, poster_path = reset_from_plex(item_title, parent)
+            if poster_source:
+                poster_source = "Plex's Show"
 
         # Upload poster and Remove "Overlay" Label
         if poster_source:
@@ -230,11 +230,16 @@ try:
                     plex_item.uploadPoster(url=poster_path)
                 else:
                     plex_item.uploadPoster(filepath=poster_path)
-            logger.info("Poster Successfully Reset")
+                logger.info("Poster Successfully Reset")
+            else:
+                logger.info("Poster will be Reset")
+
             if "Overlay" in [la.tag for la in plex_item.labels]:
                 if not pmmargs["dry"]:
                     plex_item.removeLabel("Overlay")
-                logger.info("Overlay Label Removed")
+                    logger.info("Overlay Label Removed")
+                else:
+                    logger.info("Overlay Label will be Removed")
         else:
             logger.error("Image Error: No Image Found to Restore", group=item_title)
 
@@ -434,4 +439,4 @@ logger.error_report()
 logger.switch()
 report.append([(f"{script_name} Finished", "")])
 report.append([("Total Runtime", f"{logger.runtime()}")])
-logger.report(f"{script_name} Summary", description=description, rows=report, width=18, discord=True)
+logger.report(f"{script_name} Summary", description=f"{pmmargs['library']} Library {' Dry' if pmmargs['dry'] else ''}Run Finished", rows=report, width=18, discord=True)
