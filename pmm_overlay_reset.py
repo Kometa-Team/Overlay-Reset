@@ -12,12 +12,13 @@ try:
     from pmmutils.args import PMMArgs
     from pmmutils.exceptions import Failed
     from tmdbapis import TMDbAPIs, TMDbException
-except (ModuleNotFoundError, ImportError):
+except (ModuleNotFoundError, ImportError) as e:
+    print(e)
     print("Requirements Error: Requirements are not installed")
     sys.exit(0)
 
 if sys.version_info[0] != 3 or sys.version_info[1] < 11:
-    print("Version Error: Version: %s.%s.%s incompatible please use Python 3.10+" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
+    print("Version Error: Version: %s.%s.%s incompatible please use Python 3.11+" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
     sys.exit(0)
 
 options = [
