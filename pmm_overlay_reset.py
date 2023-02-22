@@ -16,7 +16,7 @@ except (ModuleNotFoundError, ImportError):
     print("Requirements Error: Requirements are not installed")
     sys.exit(0)
 
-if sys.version_info[0] != 3 or sys.version_info[1] < 10:
+if sys.version_info[0] != 3 or sys.version_info[1] < 11:
     print("Version Error: Version: %s.%s.%s incompatible please use Python 3.10+" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
     sys.exit(0)
 
@@ -41,10 +41,6 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 config_dir = os.path.join(base_dir, "config")
 
 pmmargs = PMMArgs("meisnate12/PMM-Overlay-Reset", base_dir, options, use_nightly=False)
-secrets = [
-    pmmargs["url"], pmmargs["token"], pmmargs["tmdbapi"],
-    quote(str(pmmargs["url"])), requests.utils.urlparse(pmmargs["url"]).netloc
-]
 logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], log_requests=pmmargs["trace"])
 logger.secret([pmmargs["url"], pmmargs["discord"], pmmargs["tmdbapi"], pmmargs["token"], quote(str(pmmargs["url"])), requests.utils.urlparse(pmmargs["url"]).netloc])
 requests.Session.send = util.update_send(requests.Session.send, pmmargs["timeout"])
@@ -176,7 +172,7 @@ try:
                 plex_image_url = plex_poster.key
             break
         if plex_image_url:
-            return "plex", plex_image_url
+            return "Plex", plex_image_url
         else:
             logger.info("No Clean Plex Image Found")
             return None, None
@@ -230,7 +226,7 @@ try:
             logger.info(f"Image Source: {poster_source}")
             logger.info(f"Image Path: {poster_path}")
             if not pmmargs["dry"]:
-                if poster_source == "plex":
+                if poster_source in ["TMDb", "Plex", "Plex's Show"]:
                     plex_item.uploadPoster(url=poster_path)
                 else:
                     plex_item.uploadPoster(filepath=poster_path)
