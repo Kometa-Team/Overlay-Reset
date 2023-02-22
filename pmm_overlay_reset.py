@@ -161,14 +161,16 @@ try:
             return True
         return False
 
-    def reset_from_plex(item_title, plex_item):
+    def reset_from_plex(item_title, item_with_posters):
         plex_image_url = None
-        for p, plex_poster in enumerate(plex_item.posters(), 1):
+        for p, plex_poster in enumerate(item_with_posters.posters(), 1):
             if plex_poster.key.startswith("/"):
-                plex_image_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
+                temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
-                    if detect_overlay_in_image(item_title, f"Plex Poster {p}", url_path=plex_image_url) is not False:
+                    if detect_overlay_in_image(item_title, f"Plex Poster {p}", url_path=temp_url):
                         continue
+                    else:
+                        plex_image_url = temp_url
             else:
                 plex_image_url = plex_poster.key
             break
