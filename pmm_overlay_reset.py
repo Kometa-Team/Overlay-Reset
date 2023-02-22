@@ -42,7 +42,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 config_dir = os.path.join(base_dir, "config")
 
 pmmargs = PMMArgs("meisnate12/PMM-Overlay-Reset", base_dir, options, use_nightly=False)
-logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], log_requests=pmmargs["trace"])
+logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], trace=pmmargs["trace"], log_requests=pmmargs["trace"])
 logger.secret([pmmargs["url"], pmmargs["discord"], pmmargs["tmdbapi"], pmmargs["token"], quote(str(pmmargs["url"])), requests.utils.urlparse(pmmargs["url"]).netloc])
 requests.Session.send = util.update_send(requests.Session.send, pmmargs["timeout"])
 plexapi.BASE_HEADERS["X-Plex-Client-Identifier"] = pmmargs.uuid
@@ -168,13 +168,12 @@ try:
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
-                    if detect_overlay_in_image(item_title, f"Plex Poster {p}", url_path=temp_url):
-                        continue
-                    else:
+                    if not detect_overlay_in_image(item_title, f"Plex Poster {p}", url_path=temp_url):
                         plex_image_url = temp_url
             else:
                 plex_image_url = plex_poster.key
-            break
+            if plex_image_url:
+                break
         if plex_image_url:
             return "Plex", plex_image_url
         else:
