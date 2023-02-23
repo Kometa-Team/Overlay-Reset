@@ -370,7 +370,10 @@ try:
                 except TMDbException as e:
                     logger.error(e, group=title)
             if tmdb_id:
-                tmdb_item = tmdbapi.movie(tmdb_id) if isinstance(item, Movie) else tmdbapi.tv_show(tmdb_id)
+                try:
+                    tmdb_item = tmdbapi.movie(tmdb_id) if isinstance(item, Movie) else tmdbapi.tv_show(tmdb_id)
+                except TMDbException as e:
+                    logger.error(f"TMDb Error: {e}", group=title)
             else:
                 logger.error("Plex Error: TMDb ID Not Found", group=title)
 
