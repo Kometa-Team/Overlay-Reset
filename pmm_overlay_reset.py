@@ -130,23 +130,26 @@ try:
     else:
         logger.warning("No Originals Folder Found")
 
-    def detect_overlay_in_image(item_title, poster_source, img_path=None, url_path=None):
+    def detect_overlay_in_image(item_title, poster_source, shape, img_path=None, url_path=None):
         out_path = img_path
         if url_path:
             img_path = util.download_image(url_path, config_dir)
             out_path = url_path
-        with Image.open(img_path) as pil_image:
+        with Image.open(out_path) as pil_image:
             exif_tags = pil_image.getexif()
-        if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
-            logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
-            return True
+            if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
+                logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
+                return True
+            if (shape == "portrait" and pil_image.size != (1000, 1500)) or \
+                (shape == "landscape" and pil_image.size != (1920, 1080)):
+                logger.debug("No Overlay: Image not standard overlay size")
 
         target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         if target is None:
             logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
             return False
         if target.shape[0] < 500 or target.shape[1] < 500:
-            logger.error(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}", group=item_title)
+            logger.info(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
             return False
         for overlay_image in overlay_images:
             overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE)
@@ -167,18 +170,18 @@ try:
             return True
         return False
 
-    def reset_from_plex(item_title, item_with_posters):
+    def reset_from_plex(item_title, item_with_posters, shape):
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
             logger.trace(plex_poster.key)
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
-                    if not detect_overlay_in_image(item_title, f"Plex Poster {p}", url_path=temp_url):
+                    if not detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url):
                         return temp_url
             else:
                 return plex_poster.key
 
-    def reset_poster(item_title, plex_item, tmdb_poster_url, asset_directory, asset_file_name, parent=None):
+    def reset_poster(item_title, plex_item, tmdb_poster_url, asset_directory, asset_file_name, parent=None, shape="portrait"):
         poster_source = None
         poster_path = None
 
@@ -195,10 +198,10 @@ try:
         if not poster_source and pmmargs["original"]:
             png = os.path.join(pmmargs["original"], f"{plex_item.ratingKey}.png")
             jpg = os.path.join(pmmargs["original"], f"{plex_item.ratingKey}.jpg")
-            if os.path.exists(png) and detect_overlay_in_image(item_title, "Original Poster", img_path=png) is False:
+            if os.path.exists(png) and detect_overlay_in_image(item_title, "Original Poster", shape, img_path=png) is False:
                 poster_source = "Originals Folder"
                 poster_path = png
-            elif os.path.exists(jpg) and detect_overlay_in_image(item_title, "Original Poster", img_path=jpg) is False:
+            elif os.path.exists(jpg) and detect_overlay_in_image(item_title, "Original Poster", shape, img_path=jpg) is False:
                 poster_source = "Originals Folder"
                 poster_path = jpg
             else:
@@ -206,7 +209,7 @@ try:
 
         # Check Plex
         if not poster_source:
-            poster_path = reset_from_plex(item_title, plex_item)
+            poster_path = reset_from_plex(item_title, plex_item, shape)
             if poster_path:
                 poster_source = "Plex"
             else:
@@ -222,7 +225,7 @@ try:
 
         # Check Item's Show
         if not poster_source and parent:
-            poster_path = reset_from_plex(item_title, parent)
+            poster_path = reset_from_plex(item_title, parent, shape)
             if poster_path:
                 poster_source = "Plex's Show"
             else:
@@ -325,7 +328,7 @@ try:
                 resume_rk = None
         title = item.title
         current_rk = item.ratingKey
-        logger.separator(f"Resetting {i + 1}/{total_items} {title}", space=False, border=False, start="reset")
+        logger.separator(f"Resetting {i + 1}/{total_items} {title}", start="reset")
         try:
             reload(item)
         except Failed as e:
@@ -429,9 +432,9 @@ try:
         if isinstance(item, Show) and (pmmargs["season"] or pmmargs["episode"]):
             tmdb_seasons = {s.season_number: s for s in tmdb_item.seasons} if tmdb_item else {}
             for season in item.seasons():
-                title = f"{item.title} Season {season.seasonNumber}: {season.title}"
+                title = f"{item.title}\nSeason {season.seasonNumber}: {season.title}"
                 if pmmargs["season"]:
-                    logger.separator(f"Resetting {title}", space=False, border=False, start="reset")
+                    logger.separator(f"Resetting {title}", start="reset")
                     try:
                         reload(season)
                     except Failed as e:
@@ -460,8 +463,8 @@ try:
                                 logger.error(f"TMDb Error: An Episode of Season {season.seasonNumber} was Not Found", group=title)
 
                     for episode in season.episodes():
-                        title = f"{item.title} Episode {episode.seasonEpisode.upper()}: {episode.title}"
-                        logger.separator(f"Resetting {title}", space=False, border=False, start="reset")
+                        title = f"{item.title}\nEpisode {episode.seasonEpisode.upper()}: {episode.title}"
+                        logger.separator(f"Resetting {title}", start="reset")
                         try:
                             reload(episode)
                         except Failed as e:
@@ -469,7 +472,7 @@ try:
                             continue
                         tmdb_poster = tmdb_episodes[episode.episodeNumber].still_url if episode.episodeNumber in tmdb_episodes else None
                         file_name = episode.seasonEpisode.upper()
-                        reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if pmmargs["flat"] else file_name)
+                        reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if pmmargs["flat"] else file_name, shape="landscape")
                         logger.info(f"Runtime: {logger.runtime('reset')}")
 
     current_rk = None
