@@ -43,7 +43,7 @@ options = [
 script_name = "PMM Overlay Reset"
 base_dir = os.path.dirname(os.path.abspath(__file__))
 config_dir = os.path.join(base_dir, "config")
-resume_file = os.path.join(config_dir, "config", "resume.por")
+resume_file = os.path.join(config_dir, "resume.por")
 
 pmmargs = PMMArgs("meisnate12/PMM-Overlay-Reset", base_dir, options, use_nightly=False)
 logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], is_trace=pmmargs["trace"], log_requests=pmmargs["log-requests"])
@@ -485,13 +485,13 @@ except Exception as e:
 except KeyboardInterrupt:
     if current_rk:
         with open(resume_file, "w") as handle:
-            handle.write(current_rk)
+            handle.write(str(current_rk))
     logger.separator(f"User Canceled Run {script_name}")
     raise
 
 if current_rk:
     with open(resume_file, "w") as handle:
-        handle.write(current_rk)
+        handle.write(str(current_rk))
 
 logger.error_report()
 logger.switch()
