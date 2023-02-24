@@ -265,6 +265,7 @@ try:
                              includeFields=False, includeGeolocation=False, includeLoudnessRamps=False, includeMarkers=False,
                              includeOnDeck=False, includePopularLeaves=False, includeRelated=False, includeRelatedCount=0,
                              includeReviews=False, includeStations=False)
+            plex_item._initpath = plex_item._details_key
         except (BadRequest, NotFound) as e1:
             raise Failed(f"Plex Error: {get_title(plex_item)} Failed to Load: {e1}")
 
