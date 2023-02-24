@@ -22,25 +22,28 @@ if sys.version_info[0] != 3 or sys.version_info[1] < 11:
     sys.exit(0)
 
 options = [
-    {"arg": "u",  "key": "url",          "env": "PLEX_URL",     "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
-    {"arg": "t",  "key": "token",        "env": "PLEX_TOKEN",   "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
-    {"arg": "l",  "key": "library",      "env": "PLEX_LIBRARY", "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
-    {"arg": "a",  "key": "asset",        "env": "PMM_ASSET",    "type": "str",  "default": None,  "help": "PMM Asset Folder to Scan for restoring posters."},
-    {"arg": "o",  "key": "original",     "env": "PMM_ORIGINAL", "type": "str",  "default": None,  "help": "PMM Original Folder to Scan for restoring posters."},
-    {"arg": "ta", "key": "tmdbapi",      "env": "TMDBAPI",      "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
-    {"arg": "re", "key": "resume",       "env": "RESUME",       "type": "str",  "default": None,  "help": "Plex Item Title to Resume restoring posters from."},
-    {"arg": "di", "key": "discord",      "env": "DISCORD",      "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
-    {"arg": "ti", "key": "timeout",      "env": "TIMEOUT",      "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
-    {"arg": "d",  "key": "dry",          "env": "DRY_RUN",      "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
-    {"arg": "f",  "key": "flat",         "env": "PMM_FLAT",     "type": "bool", "default": False, "help": "PMM Asset Folder uses Flat Assets Image Paths."},
-    {"arg": "s",  "key": "season",       "env": "SEASON",       "type": "bool", "default": False, "help": "Restore Season posters during run."},
-    {"arg": "e",  "key": "episode",      "env": "EPISODE",      "type": "bool", "default": False, "help": "Restore Episode posters during run."},
-    {"arg": "tr", "key": "trace",        "env": "TRACE",        "type": "bool", "default": False, "help": "Run with extra trace logs."},
-    {"arg": "lr", "key": "log-requests", "env": "LOG_REQUESTS", "type": "bool", "default": False, "help": "Run with every request logged."}
+    {"arg": "u",  "key": "url",           "env": "PLEX_URL",      "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
+    {"arg": "t",  "key": "token",         "env": "PLEX_TOKEN",    "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
+    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",  "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
+    {"arg": "a",  "key": "asset",         "env": "PMM_ASSET",     "type": "str",  "default": None,  "help": "PMM Asset Folder to Scan for restoring posters."},
+    {"arg": "o",  "key": "original",      "env": "PMM_ORIGINAL",  "type": "str",  "default": None,  "help": "PMM Original Folder to Scan for restoring posters."},
+    {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",       "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
+    {"arg": "st", "key": "start",         "env": "START",         "type": "str",  "default": None,  "help": "Plex Item Title to Start restoring posters from."},
+    {"arg": "it", "key": "items",         "env": "ITEMS",         "type": "str",  "default": None,  "help": "Restore specific Plex Items by Title. Can use a bar-separated (|) list."},
+    {"arg": "di", "key": "discord",       "env": "DISCORD",       "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
+    {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",       "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
+    {"arg": "d",  "key": "dry",           "env": "DRY_RUN",       "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
+    {"arg": "f",  "key": "flat",          "env": "PMM_FLAT",      "type": "bool", "default": False, "help": "PMM Asset Folder uses Flat Assets Image Paths."},
+    {"arg": "s",  "key": "season",        "env": "SEASON",        "type": "bool", "default": False, "help": "Restore Season posters during run."},
+    {"arg": "e",  "key": "episode",       "env": "EPISODE",       "type": "bool", "default": False, "help": "Restore Episode posters during run."},
+    {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME", "type": "bool", "default": None,  "help": "Ignores the automatic resume."},
+    {"arg": "tr", "key": "trace",         "env": "TRACE",         "type": "bool", "default": False, "help": "Run with extra trace logs."},
+    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",  "type": "bool", "default": False, "help": "Run with every request logged."}
 ]
 script_name = "PMM Overlay Reset"
 base_dir = os.path.dirname(os.path.abspath(__file__))
 config_dir = os.path.join(base_dir, "config")
+resume_file = os.path.join(config_dir, "config", "resume.por")
 
 pmmargs = PMMArgs("meisnate12/PMM-Overlay-Reset", base_dir, options, use_nightly=False)
 logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], is_trace=pmmargs["trace"], log_requests=pmmargs["log-requests"])
@@ -56,6 +59,8 @@ try:
 except Failed as e:
     logger.error(f"Discord URL Error: {e}")
 report = []
+current_rk = None
+run_type = ""
 try:
     # Connect to Plex
     if not pmmargs["url"]:
@@ -128,7 +133,7 @@ try:
     def detect_overlay_in_image(item_title, poster_source, img_path=None, url_path=None):
         out_path = img_path
         if url_path:
-            img_path = util.download_image(url_path, base_dir)
+            img_path = util.download_image(url_path, config_dir)
             out_path = url_path
         with Image.open(img_path) as pil_image:
             exif_tags = pil_image.getexif()
@@ -269,18 +274,57 @@ try:
         except (BadRequest, NotFound) as e1:
             raise Failed(f"Plex Error: {get_title(plex_item)} Failed to Load: {e1}")
 
-    resume = f'\nResume From "{pmmargs["resume"]}"' if pmmargs["resume"] else ''
-    logger.separator(f"Resetting Posters{resume}")
+    start_from = None
+    run_items = []
+    resume_rk = None
+    if pmmargs["items"]:
+        run_items = [rs for r in pmmargs["items"].split("|") if (rs := r.strip())]
+        if len(run_items) > 1:
+            str_items = ""
+            current = ""
+            for r in run_items[:-1]:
+                current += f"{r}, "
+                if len(current) > 75:
+                    str_items += f"{current}\n"
+                    current = ""
+            str_items += f"and {run_items[-1]}"
+        else:
+            str_items = run_items[0]
+        logger.separator(f"Resetting Specific Posters\n{str_items}")
+        run_type = "of Specific Items "
+    elif pmmargs["start"]:
+        start_from = pmmargs["start"]
+        logger.separator(f'Resetting Posters\nStarting From "{start_from}"')
+        run_type = f'Starting From "{start_from}" '
+    elif not pmmargs["ignore-resume"] and os.path.exists(resume_file):
+        with open(resume_file) as handle:
+            for line in handle.readlines():
+                line = line.strip()
+                if len(line) > 0:
+                    resume_rk = str(line).strip()
+                    break
+        os.remove(resume_file)
+        if resume_rk:
+            logger.separator(f'Resetting Posters\nStarting From Rating Key "{resume_rk}"')
+            run_type = f'Starting From Rating Key "{resume_rk}" '
+    if not run_items and not start_from and not resume_rk:
+        logger.separator("Resetting All Posters")
+
     items = lib.all()
     total_items = len(items)
     for i, item in enumerate(items):
-        if pmmargs["resume"]:
-            if item.title == pmmargs["resume"]:
-                pmmargs["resume"] = None
-            else:
+        if run_items or start_from or resume_rk:
+            if (run_items and item.title not in run_items) or \
+                    (start_from and item.title != start_from) or \
+                    (resume_rk and str(item.ratingKey) != resume_rk):
                 logger.info(f"Skipping {i + 1}/{total_items} {item.title}")
                 continue
+            elif start_from:
+                start_from = None
+            elif resume_rk:
+                resume_rk = None
         title = item.title
+        current_rk = item.ratingKey
         logger.separator(f"Resetting {i + 1}/{total_items} {title}", space=False, border=False, start="reset")
         try:
             reload(item)
@@ -427,6 +471,8 @@ try:
                         file_name = episode.seasonEpisode.upper()
                         reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if pmmargs["flat"] else file_name)
                         logger.info(f"Runtime: {logger.runtime('reset')}")
+
+    current_rk = None
 except Failed as e:
     logger.separator()
     logger.critical(e, discord=True)
@@ -437,11 +483,19 @@ except Exception as e:
     logger.critical(e, discord=True)
     logger.separator()
 except KeyboardInterrupt:
+    if current_rk:
+        with open(resume_file, "w") as handle:
+            handle.write(current_rk)
     logger.separator(f"User Canceled Run {script_name}")
     raise
+
+if current_rk:
+    with open(resume_file, "w") as handle:
+        handle.write(current_rk)
 
 logger.error_report()
 logger.switch()
 report.append([(f"{script_name} Finished", "")])
 report.append([("Total Runtime", f"{logger.runtime()}")])
-logger.report(f"{script_name} Summary", description=f"{pmmargs['library']} Library {' Dry' if pmmargs['dry'] else ''}Run Finished", rows=report, width=18, discord=True)
+description = f"{pmmargs['library']} Library {' Dry' if pmmargs['dry'] else ''}Run {run_type}Finished"
+logger.report(f"{script_name} Summary", description=description, rows=report, width=18, discord=True)
