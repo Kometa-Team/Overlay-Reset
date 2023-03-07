@@ -9,7 +9,7 @@ if sys.version_info[0] != 3 or sys.version_info[1] < 11:
 try:
     import cv2, numpy, plexapi, requests
     from pmmutils import logging, util
-    from PIL import Image, ImageFile
+    from PIL import Image, ImageFile, UnidentifiedImageError
     from plexapi.exceptions import BadRequest, NotFound, Unauthorized
     from plexapi.server import PlexServer
     from plexapi.video import Movie, Show, Season, Episode
@@ -136,20 +136,24 @@ try:
             img_path = util.download_image(url_path, config_dir)
             out_path = url_path
 
-        with Image.open(img_path) as pil_image:
-            exif_tags = pil_image.getexif()
-            if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
-                logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
-                return True
-            if (shape == "portrait" and pil_image.size != (1000, 1500)) or \
-                (shape == "landscape" and pil_image.size != (1920, 1080)):
-                logger.debug("No Overlay: Image not standard overlay size")
-                return False
+        try:
+            with Image.open(img_path) as pil_image:
+                exif_tags = pil_image.getexif()
+                if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
+                    logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
+                    return True
+                if (shape == "portrait" and pil_image.size != (1000, 1500)) or \
+                    (shape == "landscape" and pil_image.size != (1920, 1080)):
+                    logger.debug("No Overlay: Image not standard overlay size")
+                    return False
+        except UnidentifiedImageError:
+            logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
+            return None
 
         target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         if target is None:
             logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
-            return False
+            return None
         if target.shape[0] < 500 or target.shape[1] < 500:
             logger.info(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
             return False
@@ -178,7 +182,7 @@ try:
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
-                    if not detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url):
+                    if detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url) is False:
                         if ignore < 1:
                             return temp_url
                         else:
