@@ -32,7 +32,7 @@ There are no detailed walkthroughs specifically for PMM Overlay Reset but the pr
 
 ### Local Install Overview
 
-PMM Overlay Reset is compatible with Python 3.11. Later versions may function but are untested.
+PMM Overlay Reset requires Python 3.11 or later. Later versions may function but are untested.
 
 These are high-level steps which assume the user has knowledge of python and pip, and the general ability to troubleshoot issues. 
 

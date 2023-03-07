@@ -2,6 +2,10 @@ import os, sys
 from xml.etree.ElementTree import ParseError
 from urllib.parse import quote
 
+if sys.version_info[0] != 3 or sys.version_info[1] < 11:
+    print("Version Error: Version: %s.%s.%s incompatible please use Python 3.11+" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
+    sys.exit(0)
+
 try:
     import cv2, numpy, plexapi, requests
     from pmmutils import logging, util
@@ -15,10 +19,6 @@ try:
 except (ModuleNotFoundError, ImportError) as e:
     print(e)
     print("Requirements Error: Requirements are not installed")
-    sys.exit(0)
-
-if sys.version_info[0] != 3 or sys.version_info[1] < 11:
-    print("Version Error: Version: %s.%s.%s incompatible please use Python 3.11+" % (sys.version_info[0], sys.version_info[1], sys.version_info[2]))
     sys.exit(0)
 
 options = [
@@ -170,16 +170,21 @@ try:
             return True
         return False
 
-    def reset_from_plex(item_title, item_with_posters, shape):
+    def reset_from_plex(item_title, item_with_posters, shape, ignore=0):
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
             logger.trace(plex_poster.key)
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
                 if plex_poster.ratingKey.startswith("upload"):
                     if not detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url):
-                        return temp_url
-            else:
+                        if ignore < 1:
+                            return temp_url
+                        else:
+                            ignore -= 1
+            elif ignore < 1:
                 return plex_poster.key
+            else:
+                ignore -= 1
 
     def reset_poster(item_title, plex_item, tmdb_poster_url, asset_directory, asset_file_name, parent=None, shape="portrait"):
         poster_source = None
@@ -231,24 +236,45 @@ try:
             else:
                 logger.info("No Clean Plex Show Image Found")
 
+        def upload(attempt=0):
+            nonlocal poster_path
+            is_url = poster_source in ["TMDb", "Plex", "Plex's Show"]
+            try:
+                if pmmargs["dry"]:
+                    logger.info(f"Poster will be Reset by {'URL' if is_url else 'File'} from {poster_source}")
+                else:
+                    logger.info(f"Reset From {poster_source}")
+                    logger.info(f"{'URL' if is_url else 'File'} Path: {poster_path}")
+                    if is_url:
+                        plex_item.uploadPoster(url=poster_path)
+                    else:
+                        plex_item.uploadPoster(filepath=poster_path)
+            except BadRequest as eb:
+                logger.error(eb, group=item_title)
+                if poster_source in ["Plex", "Plex's Show"]:
+                    attempt += 1
+                    logger.info(f"Trying next poster #{attempt + 1}")
+                    if poster_source == "Plex":
+                        poster_path = reset_from_plex(item_title, plex_item, shape, ignore=attempt)
+                        if not poster_path:
+                            logger.info("No Clean Plex Image Found")
+                    if poster_source == "Plex's Show":
+                        poster_path = reset_from_plex(item_title, parent, shape, ignore=attempt)
+                        if not poster_path:
+                            logger.info("No Clean Plex Show Image Found")
+                    if poster_path:
+                        upload(attempt=attempt)
+            else:
+                if "Overlay" in [la.tag for la in plex_item.labels]:
+                    if not pmmargs["dry"]:
+                        plex_item.removeLabel("Overlay")
+                        logger.info("Overlay Label Removed")
+                    else:
+                        logger.info("Overlay Label will be Removed")
+
         # Upload poster and Remove "Overlay" Label
         if poster_source:
-            logger.info(f"Reset From {poster_source}")
-            is_url = poster_source in ["TMDb", "Plex", "Plex's Show"]
-            if pmmargs["dry"]:
-                logger.info(f"Poster will be Reset by {'URL' if is_url else 'File'}")
-            else:
-                logger.info(f"{'URL' if is_url else 'File'} Path: {poster_path}")
-                if is_url:
-                    plex_item.uploadPoster(url=poster_path)
-                else:
-                    plex_item.uploadPoster(filepath=poster_path)
-            if "Overlay" in [la.tag for la in plex_item.labels]:
-                if not pmmargs["dry"]:
-                    plex_item.removeLabel("Overlay")
-                    logger.info("Overlay Label Removed")
-                else:
-                    logger.info("Overlay Label will be Removed")
+            upload()
         else:
             logger.error("Image Error: No Image Found to Restore", group=item_title)
 
@@ -409,14 +435,14 @@ try:
                     elif results.tv_results and isinstance(item, Show):
                         tmdb_id = results.tv_results[0].id
                 except TMDbException as e:
-                    logger.error(e, group=title)
+                    logger.warning(e, group=title)
             if not tmdb_id and tvdb_id and isinstance(item, Show):
                 try:
                     results = tmdbapi.find_by_id(tvdb_id=tvdb_id)
                     if results.tv_results:
                         tmdb_id = results.tv_results[0].id
                 except TMDbException as e:
-                    logger.error(e, group=title)
+                    logger.warning(e, group=title)
             if tmdb_id:
                 try:
                     tmdb_item = tmdbapi.movie(tmdb_id) if isinstance(item, Movie) else tmdbapi.tv_show(tmdb_id)
@@ -500,5 +526,5 @@ logger.error_report()
 logger.switch()
 report.append([(f"{script_name} Finished", "")])
 report.append([("Total Runtime", f"{logger.runtime()}")])
-description = f"{pmmargs['library']} Library {' Dry' if pmmargs['dry'] else ''}Run {run_type}Finished"
+description = f"{pmmargs['library']} Library{' Dry' if pmmargs['dry'] else ''} Run {run_type}Finished"
 logger.report(f"{script_name} Summary", description=description, rows=report, width=18, discord=True)
