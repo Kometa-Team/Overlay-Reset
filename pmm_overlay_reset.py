@@ -135,7 +135,8 @@ try:
         if url_path:
             img_path = util.download_image(url_path, config_dir)
             out_path = url_path
-        with Image.open(out_path) as pil_image:
+
+        with Image.open(img_path) as pil_image:
             exif_tags = pil_image.getexif()
             if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
                 logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
@@ -143,6 +144,7 @@ try:
             if (shape == "portrait" and pil_image.size != (1000, 1500)) or \
                 (shape == "landscape" and pil_image.size != (1920, 1080)):
                 logger.debug("No Overlay: Image not standard overlay size")
+                return False
 
         target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
         if target is None:
