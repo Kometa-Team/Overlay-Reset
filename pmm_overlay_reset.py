@@ -179,18 +179,19 @@ try:
     def reset_from_plex(item_title, item_with_posters, shape, ignore=0):
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
             logger.trace(plex_poster.key)
+            reset_url = None
             if plex_poster.key.startswith("/"):
                 temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
-                if plex_poster.ratingKey.startswith("upload"):
-                    if detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url) is False:
-                        if ignore < 1:
-                            return temp_url
-                        else:
-                            ignore -= 1
-            elif ignore < 1:
-                return plex_poster.key
+                user = plex_poster.ratingKey.startswith("upload")
+                if not user or (user and detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url) is False):
+                    reset_url = temp_url
             else:
-                ignore -= 1
+                reset_url = plex_poster.key
+            if reset_url:
+                if ignore < 1:
+                    return reset_url
+                else:
+                    ignore -= 1
 
     def reset_poster(item_title, plex_item, tmdb_poster_url, asset_directory, asset_file_name, parent=None, shape="portrait"):
         poster_source = None
