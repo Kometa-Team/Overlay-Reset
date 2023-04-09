@@ -465,7 +465,9 @@ try:
         if isinstance(item, Show) and (pmmargs["season"] or pmmargs["episode"]):
             tmdb_seasons = {s.season_number: s for s in tmdb_item.seasons} if tmdb_item else {}
             for season in item.seasons():
-                title = f"{item.title}\nSeason {season.seasonNumber}: {season.title}"
+                title = f"Season {season.seasonNumber}"
+                title = title if title == season.title else f"{title}: {season.title}"
+                title = f"{item.title}\n {title}"
                 if pmmargs["season"]:
                     logger.separator(f"Resetting {title}", start="reset")
                     try:
