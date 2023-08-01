@@ -34,6 +34,7 @@ options = [
     {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",       "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
     {"arg": "d",  "key": "dry",           "env": "DRY_RUN",       "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
     {"arg": "f",  "key": "flat",          "env": "PMM_FLAT",      "type": "bool", "default": False, "help": "PMM Asset Folder uses Flat Assets Image Paths."},
+    {"arg": "nm", "key": "no-main",       "env": "NO_MAIN",       "type": "bool", "default": False, "help": "Do not restore the Main Movie/Show posters during run."},
     {"arg": "s",  "key": "season",        "env": "SEASON",        "type": "bool", "default": False, "help": "Restore Season posters during run."},
     {"arg": "e",  "key": "episode",       "env": "EPISODE",       "type": "bool", "default": False, "help": "Restore Episode posters during run."},
     {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME", "type": "bool", "default": None,  "help": "Ignores the automatic resume."},
@@ -142,15 +143,14 @@ try:
                 if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
                     logger.debug(f"Overlay Detected: EXIF Overlay Tag Found ignoring {poster_source}: {out_path}")
                     return True
-                if (shape == "portrait" and pil_image.size != (1000, 1500)) or \
-                    (shape == "landscape" and pil_image.size != (1920, 1080)):
+                if (shape == "portrait" and pil_image.size != (1000, 1500)) or (shape == "landscape" and pil_image.size != (1920, 1080)):
                     logger.debug("No Overlay: Image not standard overlay size")
                     return False
         except UnidentifiedImageError:
             logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
             return None
 
-        target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE) # noqa
         if target is None:
             logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
             return None
@@ -158,7 +158,7 @@ try:
             logger.info(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
             return False
         for overlay_image in overlay_images:
-            overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE)
+            overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE) # noqa
             if overlay is None:
                 logger.error(f"Image Load Error: {overlay_image}", group=item_title)
                 continue
@@ -167,7 +167,7 @@ try:
                 logger.error(f"Image Error: {overlay_image} is larger than {poster_source}: {out_path}", group=item_title)
                 continue
 
-            template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED) # noinspection PyUnresolvedReferences
+            template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED) # noqa
             loc = numpy.where(template_result >= 0.95)
 
             if len(loc[0]) == 0:
@@ -306,7 +306,7 @@ try:
                              includeFields=False, includeGeolocation=False, includeLoudnessRamps=False, includeMarkers=False,
                              includeOnDeck=False, includePopularLeaves=False, includeRelated=False, includeRelatedCount=0,
                              includeReviews=False, includeStations=False)
-            plex_item._initpath = plex_item._details_key
+            plex_item._autoReload = False
         except (BadRequest, NotFound) as e1:
             raise Failed(f"Plex Error: {get_title(plex_item)} Failed to Load: {e1}")
 
@@ -399,7 +399,7 @@ try:
 
         tmdb_item = None
         if tmdbapi:
-            guid = requests.utils.urlparse(item.guid)
+            guid = requests.utils.urlparse(item.guid) # noqa
             item_type = guid.scheme.split(".")[-1]
             check_id = guid.netloc
             tmdb_id = None
@@ -407,7 +407,7 @@ try:
             imdb_id = None
             if item_type == "plex":
                 for guid_tag in item.guids:
-                    url_parsed = requests.utils.urlparse(guid_tag.id)
+                    url_parsed = requests.utils.urlparse(guid_tag.id) # noqa
                     if url_parsed.scheme == "tvdb":
                         tvdb_id = int(url_parsed.netloc)
                     elif url_parsed.scheme == "imdb":
@@ -458,7 +458,8 @@ try:
             else:
                 logger.error("Plex Error: TMDb ID Not Found", group=title)
 
-        reset_poster(title, item, tmdb_item.poster_url if tmdb_item else None, item_asset_directory, asset_name if pmmargs["flat"] else "poster")
+        if not pmmargs["no-main"]:
+            reset_poster(title, item, tmdb_item.poster_url if tmdb_item else None, item_asset_directory, asset_name if pmmargs["flat"] else "poster")
 
         logger.info(f"Runtime: {logger.runtime('reset')}")
 

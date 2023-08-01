@@ -119,6 +119,7 @@ Each option can be applied in three ways:
 | Timeout                 | Timeout can be any number greater then 0. **Default:** `600`<br>**Shell Command:** `-ti` or `--timeout 1000`<br>**Environment Variable:** `TIMEOUT=1000`                                                                                                                            | &#10060; |
 | Dry Run                 | Run as a Dry Run without making changes in Plex.<br>**Shell Command:** `-d` or `--dry`<br>**Environment Variable:** `DRY_RUN=True`                                                                                                                                                  | &#10060; |
 | Flat Assets             | PMM Asset Folder uses [Flat Assets Image Paths](https://metamanager.wiki/en/latest/home/guides/assets.html#asset-naming).<br>**Shell Command:** `-f` or `--flat`<br>**Environment Variable:** `PMM_FLAT=True`                                                                       | &#10060; |
+| Reset Main Posters      | Do not restore Main Show/Movie posters during run.<br>**Shell Command:** `-nm` or `--no-main`<br>**Environment Variable:** `NO_MAIN=True`                                                                                                                                           | &#10060; |
 | Reset Season Posters    | Restore Season posters during run.<br>**Shell Command:** `-s` or `--season`<br>**Environment Variable:** `SEASON=True`                                                                                                                                                              | &#10060; |
 | Reset Episode Posters   | Restore Episode posters during run.<br>**Shell Command:** `-e` or `--episode`<br>**Environment Variable:** `EPISODE=True`                                                                                                                                                           | &#10060; |
 | Ignore Automatic Resume | Ignores the automatic resume.<br>**Shell Command:** `-ir` or `--ignore-resume`<br>**Environment Variable:** `IGNORE_RESUME=True`                                                                                                                                                    | &#10060; |
@@ -139,6 +140,7 @@ ITEMS=
 TIMEOUT=600
 DRY_RUN=True
 PMM_FLAT=False
+NO_MAIN=False
 SEASON=True
 EPISODE=True
 IGNORE_RESUME=False
