@@ -116,6 +116,7 @@ Each option can be applied in three ways:
 | TMDb V3 API Key         | TMDb V3 API Key for restoring posters from TMDb.<br>**Shell Command:** `-ta` or `--tmdbapi 123456789123456789`<br>**Environment Variable:** `TMDBAPI=123456789123456789`                                                                                                            | &#10060; |
 | Start From              | Plex Item Title to Start restoring posters from.<br>**Shell Command:** `-st` or `--start "Mad Max"`<br>**Environment Variable:** `START=Mad Max`                                                                                                                                    | &#10060; |
 | Items                   | Restore specific Plex Items by Title. Can use a bar-separated (<code>&#124;</code>) list.<br>**Shell Command:** `-it` or <code>--items "Mad Max&#124;Mad Max 2"</code><br>**Environment Variable:** <code>ITEMS=Mad Max&#124;Mad Max 2</code>                                       | &#10060; |
+| Labels                  | Additional labels to remove. Can use a bar-separated (<code>&#124;</code>) list.<br>**Shell Command:** `-lb` or <code>--labels "TCM&#124;Other Label"</code><br>**Environment Variable:** <code>LABELS=TCM&#124;Other Label</code>                                                  | &#10060; |
 | Timeout                 | Timeout can be any number greater then 0. **Default:** `600`<br>**Shell Command:** `-ti` or `--timeout 1000`<br>**Environment Variable:** `TIMEOUT=1000`                                                                                                                            | &#10060; |
 | Dry Run                 | Run as a Dry Run without making changes in Plex.<br>**Shell Command:** `-d` or `--dry`<br>**Environment Variable:** `DRY_RUN=True`                                                                                                                                                  | &#10060; |
 | Flat Assets             | PMM Asset Folder uses [Flat Assets Image Paths](https://metamanager.wiki/en/latest/home/guides/assets.html#asset-naming).<br>**Shell Command:** `-f` or `--flat`<br>**Environment Variable:** `PMM_FLAT=True`                                                                       | &#10060; |
@@ -137,6 +138,7 @@ PMM_ORIGINAL=C:\Plex Meta Manager\config\overlays\Movies Original Posters
 TMDBAPI=123456789123456789
 START=
 ITEMS=
+LABELS=
 TIMEOUT=600
 DRY_RUN=True
 PMM_FLAT=False

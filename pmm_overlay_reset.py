@@ -30,6 +30,7 @@ options = [
     {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",       "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
     {"arg": "st", "key": "start",         "env": "START",         "type": "str",  "default": None,  "help": "Plex Item Title to Start restoring posters from."},
     {"arg": "it", "key": "items",         "env": "ITEMS",         "type": "str",  "default": None,  "help": "Restore specific Plex Items by Title. Can use a bar-separated (|) list."},
+    {"arg": "lb", "key": "labels",        "env": "LABELS",        "type": "str",  "default": None,  "help": "Additional labels to remove. Can use a bar-separated (|) list."},
     {"arg": "di", "key": "discord",       "env": "DISCORD",       "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
     {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",       "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
     {"arg": "d",  "key": "dry",           "env": "DRY_RUN",       "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
@@ -93,6 +94,12 @@ try:
             logger.info("TMDb Connection Successful")
         except TMDbException as e:
             logger.error(e)
+
+    # Check Labels
+    labels = ["Overlay"]
+    if pmmargs["labels"]:
+        labels.extend(pmmargs["labels"].split("|"))
+    logger.info(f"Labels to be Removed: {', '.join(labels)}")
 
     # Check for Overlay Files
     overlay_directory = os.path.join(base_dir, "overlays")
@@ -272,12 +279,14 @@ try:
                     if poster_path:
                         upload(attempt=attempt)
             else:
-                if "Overlay" in [la.tag for la in plex_item.labels]:
-                    if not pmmargs["dry"]:
-                        plex_item.removeLabel("Overlay")
-                        logger.info("Overlay Label Removed")
-                    else:
-                        logger.info("Overlay Label will be Removed")
+                item_labels = [la.tag for la in plex_item.labels]
+                remove_labels = [la for la in labels if la in item_labels]
+                if not pmmargs["dry"]:
+                    for label in remove_labels:
+                        plex_item.removeLabel(label)
+                    logger.info(f"Labels Removed: {', '.join(remove_labels)}")
+                else:
+                    logger.info(f"Labels To Be Removed: {', '.join(remove_labels)}")
 
         # Upload poster and Remove "Overlay" Label
         if poster_source:
