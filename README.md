@@ -67,8 +67,10 @@ python pmm_overlay_reset.py
 docker run -v <PATH_TO_CONFIG>:/config:rw meisnate12/pmm-overlay-reset
 ```
 * The `-v <PATH_TO_CONFIG>:/config:rw` flag mounts the location you choose as a persistent volume to store your files.
-  * Change `<PATH_TO_CONFIG>` to a folder where your .env and other files are.
-  * If your directory has spaces (such as "My Documents"), place quotation marks around your directory pathing as shown here: `-v "<PATH_TO_CONFIG>:/config:rw"`
+
+    * Change `<PATH_TO_CONFIG>` to a folder where your .env and other files are.
+  
+    * If your directory has spaces (such as "My Documents"), place quotation marks around your directory pathing as shown here: `-v "<PATH_TO_CONFIG>:/config:rw"`
 
 Example Docker Run command:
 
@@ -103,7 +105,9 @@ A `Dockerfile` is included within the GitHub repository for those who require it
 Each option can be applied in three ways:
 
 1. Use the Shell Command when launching.
+
 2. Setting the Environment Variable.
+
 3. Adding the Environment Variables to `config/.env` 
 
 | Option                  | Description                                                                                                                                                                                                                                                                         | Required |
@@ -127,8 +131,8 @@ Each option can be applied in three ways:
 | Trace Logs              | Run with extra trace logs.<br>**Shell Command:** `-tr` or `--trace`<br>**Environment Variable:** `TRACE=True`                                                                                                                                                                       | &#10060; |
 | Log Requests            | Run with every request logged.<br>**Shell Command:** `-lr` or `--log-requests`<br>**Environment Variable:** `LOG_REQUESTS=True`                                                                                                                                                     | &#10060; |
 
-
 ### Example .env File
+
 ```
 PLEX_URL=http://192.168.1.12:32400
 PLEX_TOKEN=123456789
