@@ -4,4 +4,4 @@ pillow==9.5.0
 PlexAPI==4.15.0
 pmmutils==0.5.10
 requests==2.31.0
-tmdbapis==1.2.0
+tmdbapis==1.2.6
