@@ -84,7 +84,6 @@ docker run -v "X:\Media\PMM Overlay Reset\config:/config:rw" meisnate12/pmm-over
 
 Example Docker Compose file:
 ```yaml
-version: "2.1"
 services:
   pmm-overlay-reset:
     image: meisnate12/pmm-overlay-reset
