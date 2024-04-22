@@ -8,13 +8,11 @@ if sys.version_info[0] != 3 or sys.version_info[1] < 11:
 
 try:
     import cv2, numpy, plexapi, requests
-    from pmmutils import logging, util
+    from kometautils import util, KometaArgs, KometaLogger, Failed
     from PIL import Image, ImageFile, UnidentifiedImageError
     from plexapi.exceptions import BadRequest, NotFound, Unauthorized
     from plexapi.server import PlexServer
     from plexapi.video import Movie, Show, Season, Episode
-    from pmmutils.args import PMMArgs
-    from pmmutils.exceptions import Failed
     from tmdbapis import TMDbAPIs, TMDbException
 except (ModuleNotFoundError, ImportError) as e:
     print(e)
@@ -22,39 +20,39 @@ except (ModuleNotFoundError, ImportError) as e:
     sys.exit(0)
 
 options = [
-    {"arg": "u",  "key": "url",           "env": "PLEX_URL",      "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
-    {"arg": "t",  "key": "token",         "env": "PLEX_TOKEN",    "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
-    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",  "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
-    {"arg": "a",  "key": "asset",         "env": "PMM_ASSET",     "type": "str",  "default": None,  "help": "PMM Asset Folder to Scan for restoring posters."},
-    {"arg": "o",  "key": "original",      "env": "PMM_ORIGINAL",  "type": "str",  "default": None,  "help": "PMM Original Folder to Scan for restoring posters."},
-    {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",       "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
-    {"arg": "st", "key": "start",         "env": "START",         "type": "str",  "default": None,  "help": "Plex Item Title to Start restoring posters from."},
-    {"arg": "it", "key": "items",         "env": "ITEMS",         "type": "str",  "default": None,  "help": "Restore specific Plex Items by Title. Can use a bar-separated (|) list."},
-    {"arg": "lb", "key": "labels",        "env": "LABELS",        "type": "str",  "default": None,  "help": "Additional labels to remove. Can use a bar-separated (|) list."},
-    {"arg": "di", "key": "discord",       "env": "DISCORD",       "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
-    {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",       "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
-    {"arg": "d",  "key": "dry",           "env": "DRY_RUN",       "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
-    {"arg": "f",  "key": "flat",          "env": "PMM_FLAT",      "type": "bool", "default": False, "help": "PMM Asset Folder uses Flat Assets Image Paths."},
-    {"arg": "nm", "key": "no-main",       "env": "NO_MAIN",       "type": "bool", "default": False, "help": "Do not restore the Main Movie/Show posters during run."},
-    {"arg": "s",  "key": "season",        "env": "SEASON",        "type": "bool", "default": False, "help": "Restore Season posters during run."},
-    {"arg": "e",  "key": "episode",       "env": "EPISODE",       "type": "bool", "default": False, "help": "Restore Episode posters during run."},
-    {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME", "type": "bool", "default": None,  "help": "Ignores the automatic resume."},
-    {"arg": "tr", "key": "trace",         "env": "TRACE",         "type": "bool", "default": False, "help": "Run with extra trace logs."},
-    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",  "type": "bool", "default": False, "help": "Run with every request logged."}
+    {"arg": "u",  "key": "url",           "env": "PLEX_URL",        "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
+    {"arg": "t",  "key": "token",         "env": "PLEX_TOKEN",      "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
+    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",    "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
+    {"arg": "a",  "key": "asset",         "env": "KOMETA_ASSET",    "type": "str",  "default": None,  "help": "Kometa Asset Folder to Scan for restoring posters."},
+    {"arg": "o",  "key": "original",      "env": "KOMETA_ORIGINAL", "type": "str",  "default": None,  "help": "Kometa Original Folder to Scan for restoring posters."},
+    {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",         "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
+    {"arg": "st", "key": "start",         "env": "START",           "type": "str",  "default": None,  "help": "Plex Item Title to Start restoring posters from."},
+    {"arg": "it", "key": "items",         "env": "ITEMS",           "type": "str",  "default": None,  "help": "Restore specific Plex Items by Title. Can use a bar-separated (|) list."},
+    {"arg": "lb", "key": "labels",        "env": "LABELS",          "type": "str",  "default": None,  "help": "Additional labels to remove. Can use a bar-separated (|) list."},
+    {"arg": "di", "key": "discord",       "env": "DISCORD",         "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
+    {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",         "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
+    {"arg": "d",  "key": "dry",           "env": "DRY_RUN",         "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
+    {"arg": "f",  "key": "flat",          "env": "KOMETA_FLAT",     "type": "bool", "default": False, "help": "Kometa Asset Folder uses Flat Assets Image Paths."},
+    {"arg": "nm", "key": "no-main",       "env": "NO_MAIN",         "type": "bool", "default": False, "help": "Do not restore the Main Movie/Show posters during run."},
+    {"arg": "s",  "key": "season",        "env": "SEASON",          "type": "bool", "default": False, "help": "Restore Season posters during run."},
+    {"arg": "e",  "key": "episode",       "env": "EPISODE",         "type": "bool", "default": False, "help": "Restore Episode posters during run."},
+    {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME",   "type": "bool", "default": None,  "help": "Ignores the automatic resume."},
+    {"arg": "tr", "key": "trace",         "env": "TRACE",           "type": "bool", "default": False, "help": "Run with extra trace logs."},
+    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",    "type": "bool", "default": False, "help": "Run with every request logged."}
 ]
-script_name = "PMM Overlay Reset"
+script_name = "Overlay Reset"
 base_dir = os.path.dirname(os.path.abspath(__file__))
 config_dir = os.path.join(base_dir, "config")
-resume_file = os.path.join(config_dir, "resume.por")
+resume_file = os.path.join(config_dir, "resume.kor")
 
-pmmargs = PMMArgs("meisnate12/PMM-Overlay-Reset", base_dir, options, use_nightly=False)
-logger = logging.PMMLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=pmmargs["discord"], is_trace=pmmargs["trace"], log_requests=pmmargs["log-requests"])
-logger.secret([pmmargs["url"], pmmargs["discord"], pmmargs["tmdbapi"], pmmargs["token"], quote(str(pmmargs["url"])), requests.utils.urlparse(pmmargs["url"]).netloc])
-requests.Session.send = util.update_send(requests.Session.send, pmmargs["timeout"])
-plexapi.BASE_HEADERS["X-Plex-Client-Identifier"] = pmmargs.uuid
+args = KometaArgs("Kometa-Team/Overlay-Reset", base_dir, options, use_nightly=False)
+logger = KometaLogger(script_name, "overlay_reset", os.path.join(config_dir, "logs"), discord_url=args["discord"], is_trace=args["trace"], log_requests=args["log-requests"])
+logger.secret([args["url"], args["discord"], args["tmdbapi"], args["token"], quote(str(args["url"])), requests.utils.urlparse(args["url"]).netloc])
+requests.Session.send = util.update_send(requests.Session.send, args["timeout"])
+plexapi.BASE_HEADERS["X-Plex-Client-Identifier"] = args.uuid
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-logger.header(pmmargs, sub=True, discord_update=True)
+logger.header(args, sub=True, discord_update=True)
 logger.separator("Validating Options", space=False, border=False)
 try:
     logger.info("Script Started", log=False, discord=True, start="script")
@@ -65,40 +63,40 @@ current_rk = None
 run_type = ""
 try:
     # Connect to Plex
-    if not pmmargs["url"]:
+    if not args["url"]:
         raise Failed("Error: No Plex URL Provided")
-    if not pmmargs["token"]:
+    if not args["token"]:
         raise Failed("Error: No Plex Token Provided")
-    if not pmmargs["library"]:
+    if not args["library"]:
         raise Failed("Error: No Plex Library Name Provided")
     try:
-        server = PlexServer(pmmargs["url"], pmmargs["token"], timeout=pmmargs["timeout"])
-        plexapi.server.TIMEOUT = pmmargs["timeout"]
-        os.environ["PLEXAPI_PLEXAPI_TIMEOUT"] = str(pmmargs["timeout"])
+        server = PlexServer(args["url"], args["token"], timeout=args["timeout"])
+        plexapi.server.TIMEOUT = args["timeout"]
+        os.environ["PLEXAPI_PLEXAPI_TIMEOUT"] = str(args["timeout"])
         logger.info("Plex Connection Successful")
     except Unauthorized:
         raise Failed("Plex Error: Plex token is invalid")
     except (requests.exceptions.ConnectionError, ParseError):
         raise Failed("Plex Error: Plex url is invalid")
-    lib = next((s for s in server.library.sections() if s.title == pmmargs["library"]), None)
+    lib = next((s for s in server.library.sections() if s.title == args["library"]), None)
     if not lib:
-        raise Failed(f"Plex Error: Library: {pmmargs['library']} not found. Options: {', '.join([s.title for s in server.library.sections()])}")
+        raise Failed(f"Plex Error: Library: {args['library']} not found. Options: {', '.join([s.title for s in server.library.sections()])}")
     if lib.type not in ["movie", "show"]:
         raise Failed("Plex Error: Plex Library must be Movie or Show")
 
     # Connect to TMDb
     tmdbapi = None
-    if pmmargs["tmdbapi"]:
+    if args["tmdbapi"]:
         try:
-            tmdbapi = TMDbAPIs(pmmargs["tmdbapi"])
+            tmdbapi = TMDbAPIs(args["tmdbapi"])
             logger.info("TMDb Connection Successful")
         except TMDbException as e:
             logger.error(e)
 
     # Check Labels
     labels = ["Overlay"]
-    if pmmargs["labels"]:
-        labels.extend(pmmargs["labels"].split("|"))
+    if args["labels"]:
+        labels.extend(args["labels"].split("|"))
     logger.info(f"Labels to be Removed: {', '.join(labels)}")
 
     # Check for Overlay Files
@@ -116,25 +114,25 @@ try:
     # Check for Assets Folder
     assets_directory = os.path.join(base_dir, "assets")
 
-    if os.path.exists(assets_directory) and os.listdir(assets_directory) and not pmmargs["asset"]:
-        pmmargs["asset"] = assets_directory
-    if pmmargs["asset"]:
-        pmmargs["asset"] = os.path.abspath(pmmargs["asset"])
-        if not os.path.exists(pmmargs["asset"]):
-            raise Failed(f"Folder Error: Asset Folder Path Not Found: {pmmargs['asset']}")
-        logger.info(f"Asset Folder Loaded: {pmmargs['asset']}")
+    if os.path.exists(assets_directory) and os.listdir(assets_directory) and not args["asset"]:
+        args["asset"] = assets_directory
+    if args["asset"]:
+        args["asset"] = os.path.abspath(args["asset"])
+        if not os.path.exists(args["asset"]):
+            raise Failed(f"Folder Error: Asset Folder Path Not Found: {args['asset']}")
+        logger.info(f"Asset Folder Loaded: {args['asset']}")
     else:
         logger.warning("No Asset Folder Found")
 
     # Check for Originals Folder
     originals_directory = os.path.join(base_dir, "originals")
-    if os.path.exists(originals_directory) and os.listdir(originals_directory) and not pmmargs["original"]:
-        pmmargs["original"] = originals_directory
-    if pmmargs["original"]:
-        pmmargs["original"] = os.path.abspath(pmmargs["original"])
-        if not os.path.exists(pmmargs["original"]):
-            raise Failed(f"Folder Error: Original Folder Path Not Found: {os.path.abspath(pmmargs['original'])}")
-        logger.info(f"Originals Folder Loaded: {pmmargs['original']}")
+    if os.path.exists(originals_directory) and os.listdir(originals_directory) and not args["original"]:
+        args["original"] = originals_directory
+    if args["original"]:
+        args["original"] = os.path.abspath(args["original"])
+        if not os.path.exists(args["original"]):
+            raise Failed(f"Folder Error: Original Folder Path Not Found: {os.path.abspath(args['original'])}")
+        logger.info(f"Originals Folder Loaded: {args['original']}")
     else:
         logger.warning("No Originals Folder Found")
 
@@ -188,7 +186,7 @@ try:
             logger.trace(plex_poster.key)
             reset_url = None
             if plex_poster.key.startswith("/"):
-                temp_url = f"{pmmargs['url']}{plex_poster.key}&X-Plex-Token={pmmargs['token']}"
+                temp_url = f"{args['url']}{plex_poster.key}&X-Plex-Token={args['token']}"
                 user = plex_poster.ratingKey.startswith("upload")
                 if not user or (user and detect_overlay_in_image(item_title, f"Plex Poster {p}", shape, url_path=temp_url) is False):
                     reset_url = temp_url
@@ -214,9 +212,9 @@ try:
                 logger.info("No Asset Found")
 
         # Check Original Folder
-        if not poster_source and pmmargs["original"]:
-            png = os.path.join(pmmargs["original"], f"{plex_item.ratingKey}.png")
-            jpg = os.path.join(pmmargs["original"], f"{plex_item.ratingKey}.jpg")
+        if not poster_source and args["original"]:
+            png = os.path.join(args["original"], f"{plex_item.ratingKey}.png")
+            jpg = os.path.join(args["original"], f"{plex_item.ratingKey}.jpg")
             if os.path.exists(png) and detect_overlay_in_image(item_title, "Original Poster", shape, img_path=png) is False:
                 poster_source = "Originals Folder"
                 poster_path = png
@@ -254,7 +252,7 @@ try:
             nonlocal poster_path
             is_url = poster_source in ["TMDb", "Plex", "Plex's Show"]
             try:
-                if pmmargs["dry"]:
+                if args["dry"]:
                     logger.info(f"Poster will be Reset by {'URL' if is_url else 'File'} from {poster_source}")
                 else:
                     logger.info(f"Reset From {poster_source}")
@@ -281,7 +279,7 @@ try:
             else:
                 item_labels = [la.tag for la in plex_item.labels]
                 remove_labels = [la for la in labels if la in item_labels]
-                if not pmmargs["dry"]:
+                if not args["dry"]:
                     for label in remove_labels:
                         plex_item.removeLabel(label)
                     logger.info(f"Labels Removed: {', '.join(remove_labels)}")
@@ -322,8 +320,8 @@ try:
     start_from = None
     run_items = []
     resume_rk = None
-    if pmmargs["items"]:
-        run_items = [rs for r in pmmargs["items"].split("|") if (rs := r.strip())]
+    if args["items"]:
+        run_items = [rs for r in args["items"].split("|") if (rs := r.strip())]
         if len(run_items) > 1:
             str_items = ""
             current = ""
@@ -337,11 +335,11 @@ try:
             str_items = run_items[0]
         logger.separator(f"Resetting Specific Posters\n{str_items}")
         run_type = "of Specific Items "
-    elif pmmargs["start"]:
-        start_from = pmmargs["start"]
+    elif args["start"]:
+        start_from = args["start"]
         logger.separator(f'Resetting Posters\nStarting From "{start_from}"')
         run_type = f'Starting From "{start_from}" '
-    elif not pmmargs["ignore-resume"] and os.path.exists(resume_file):
+    elif not args["ignore-resume"] and os.path.exists(resume_file):
         with open(resume_file) as handle:
             for line in handle.readlines():
                 line = line.strip()
@@ -377,10 +375,10 @@ try:
             logger.error(e, group=title)
             continue
 
-        # Find Item's PMM Asset Directory
+        # Find Item's Kometa Asset Directory
         item_asset_directory = None
         asset_name = None
-        if pmmargs["asset"]:
+        if args["asset"]:
             if not item.locations:
                 logger.error(f"Asset Error: No video filepath found fo {title}", group=title)
             else:
@@ -389,14 +387,14 @@ try:
                 if not os.path.dirname(path_test):
                     path_test = path_test.replace("\\", "/")
                 asset_name = util.validate_filename(os.path.basename(os.path.dirname(path_test) if isinstance(item, Movie) else path_test))
-                if pmmargs["flat"]:
-                    item_asset_directory = pmmargs["asset"]
+                if args["flat"]:
+                    item_asset_directory = args["asset"]
                     file_name = asset_name
-                elif os.path.isdir(os.path.join(pmmargs["asset"], asset_name)):
-                    item_asset_directory = os.path.join(pmmargs["asset"], asset_name)
+                elif os.path.isdir(os.path.join(args["asset"], asset_name)):
+                    item_asset_directory = os.path.join(args["asset"], asset_name)
                 else:
                     for n in range(1, 5):
-                        new_path = pmmargs["asset"]
+                        new_path = args["asset"]
                         for m in range(1, n + 1):
                             new_path = os.path.join(new_path, "*")
                         matches = util.glob_filter(os.path.join(new_path, asset_name))
@@ -467,18 +465,18 @@ try:
             else:
                 logger.error("Plex Error: TMDb ID Not Found", group=title)
 
-        if not pmmargs["no-main"]:
-            reset_poster(title, item, tmdb_item.poster_url if tmdb_item else None, item_asset_directory, asset_name if pmmargs["flat"] else "poster")
+        if not args["no-main"]:
+            reset_poster(title, item, tmdb_item.poster_url if tmdb_item else None, item_asset_directory, asset_name if args["flat"] else "poster")
 
         logger.info(f"Runtime: {logger.runtime('reset')}")
 
-        if isinstance(item, Show) and (pmmargs["season"] or pmmargs["episode"]):
+        if isinstance(item, Show) and (args["season"] or args["episode"]):
             tmdb_seasons = {s.season_number: s for s in tmdb_item.seasons} if tmdb_item else {}
             for season in item.seasons():
                 title = f"Season {season.seasonNumber}"
                 title = title if title == season.title else f"{title}: {season.title}"
                 title = f"{item.title}\n {title}"
-                if pmmargs["season"]:
+                if args["season"]:
                     logger.separator(f"Resetting {title}", start="reset")
                     try:
                         reload(season)
@@ -487,12 +485,12 @@ try:
                         continue
                     tmdb_poster = tmdb_seasons[season.seasonNumber].poster_url if season.seasonNumber in tmdb_seasons else None
                     file_name = f"Season{'0' if not season.seasonNumber or season.seasonNumber < 10 else ''}{season.seasonNumber}"
-                    reset_poster(title, season, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if pmmargs["flat"] else file_name, parent=item)
+                    reset_poster(title, season, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if args["flat"] else file_name, parent=item)
 
                     logger.info(f"Runtime: {logger.runtime('reset')}")
 
-                if pmmargs["episode"]:
-                    if not pmmargs["season"]:
+                if args["episode"]:
+                    if not args["season"]:
                         try:
                             reload(season)
                         except Failed as e:
@@ -517,7 +515,7 @@ try:
                             continue
                         tmdb_poster = tmdb_episodes[episode.episodeNumber].still_url if episode.episodeNumber in tmdb_episodes else None
                         file_name = episode.seasonEpisode.upper()
-                        reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if pmmargs["flat"] else file_name, shape="landscape")
+                        reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if args["flat"] else file_name, shape="landscape")
                         logger.info(f"Runtime: {logger.runtime('reset')}")
 
     current_rk = None
@@ -545,5 +543,5 @@ logger.error_report()
 logger.switch()
 report.append([(f"{script_name} Finished", "")])
 report.append([("Total Runtime", f"{logger.runtime()}")])
-description = f"{pmmargs['library']} Library{' Dry' if pmmargs['dry'] else ''} Run {run_type}Finished"
+description = f"{args['library']} Library{' Dry' if args['dry'] else ''} Run {run_type}Finished"
 logger.report(f"{script_name} Summary", description=description, rows=report, width=18, discord=True)
