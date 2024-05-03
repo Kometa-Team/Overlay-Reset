@@ -32,7 +32,7 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
+      - name: Build and Push
         id: docker_build
         uses: docker/build-push-action@v5
         with:
@@ -49,11 +49,11 @@ jobs:
         with:
           webhook_id_token: ${{ secrets.DEVELOP_WEBHOOK }}
           title: Commits
-          message: "${{ secrets.DEVELOP_TAG }} - An update to ${{ secrets.NAME }} has been published and is available to users of the **develop** branch."
+          message: "${{ vars.DEVELOP_TAG }} - An update to ${{ vars.NAME }} has been published and is available to users of the **develop** branch."
           commits: "true"
           username: Kobota
           avatar_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/logo.png
-          author: ${{ secrets.NAME }} Develop Release
+          author: ${{ vars.NAME }} Develop Release
           author_icon_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/release.png
 
       - name: Discord Success Notification
@@ -61,11 +61,11 @@ jobs:
         if: success()
         with:
           webhook_id_token: ${{ secrets.BUILD_WEBHOOK }}
-          title: "${{ secrets.REPO_NAME }} develop: **Build Successful**"
-          url: https://github.com/Kometa-Team/${{ secrets.REPO_NAME }}/actions/runs/${{ github.run_id }}
+          title: "${{ vars.REPO_NAME }} develop: **Build Successful**"
+          url: https://github.com/Kometa-Team/${{ vars.REPO_NAME }}/actions/runs/${{ github.run_id }}
           color: 844716
           username: Kobota
-          avatar_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/logo.png
+          avatar_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/bot.png
           author: Docker
           author_icon_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/docker.png
 
@@ -75,10 +75,10 @@ jobs:
         with:
           webhook_id_token: ${{ secrets.BUILD_WEBHOOK }}
           message: <@&1079153184007790652>
-          title: "${{ secrets.REPO_NAME }} develop: **Build Failed**"
-          url: https://github.com/Kometa-Team/${{ secrets.REPO_NAME }}/actions/runs/${{ github.run_id }}
+          title: "${{ vars.REPO_NAME }} develop: **Build Failed**"
+          url: https://github.com/Kometa-Team/${{ vars.REPO_NAME }}/actions/runs/${{ github.run_id }}
           color: 14879811
           username: Kobota
-          avatar_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/logo.png
+          avatar_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/bot.png
           author: Docker
           author_icon_url: https://raw.githubusercontent.com/Kometa-Team/Kometa/nightly/.github/docker.png

@@ -142,8 +142,7 @@ try:
             img_path = util.download_image(url_path, config_dir)
             out_path = url_path
         try:
-            logger.trace(f"Temp Image Path: {img_path}")
-
+            logger.trace(str(img_path))
             with Image.open(img_path) as pil_image:
                 exif_tags = pil_image.getexif()
                 if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
@@ -153,6 +152,7 @@ try:
                     logger.debug("No Overlay: Image not standard overlay size")
                     return False
 
+            logger.trace(str(img_path))
             target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE) # noqa
             if target is None:
                 logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
@@ -178,17 +178,14 @@ try:
                 logger.debug(f"Overlay Detected: {overlay_image} found in {poster_source}: {out_path} with score {template_result.max()}")
                 return True
             return False
-        except Exception as er:
-            logger.separator()
-            logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
+        except Exception:
             logger.stacktrace()
-            logger.critical(er, discord=True)
-            logger.separator()
+            logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
             return None
 
     def reset_from_plex(item_title, item_with_posters, shape, ignore=0):
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
-            logger.trace(plex_poster.key)
+            logger.trace(f"Poster URL: {plex_poster.key}")
             reset_url = None
             if plex_poster.key.startswith("/"):
                 temp_url = f"{args['url']}{plex_poster.key}&X-Plex-Token={args['token']}"
