@@ -42,7 +42,7 @@ jobs:
             "BRANCH_NAME=develop"
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: kometateam/${{ secrets.DOCKER_REPO }}:develop
+          tags: kometateam/${{ vars.DOCKER_REPO }}:develop
 
       - name: Send Discord Commit Notification
         uses: Kometa-Team/discord-notifications@master
