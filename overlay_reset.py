@@ -141,8 +141,9 @@ try:
         if url_path:
             img_path = util.download_image(url_path, config_dir)
             out_path = url_path
-
         try:
+            logger.trace(f"Temp Image Path: {img_path}")
+
             with Image.open(img_path) as pil_image:
                 exif_tags = pil_image.getexif()
                 if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
@@ -151,35 +152,39 @@ try:
                 if (shape == "portrait" and pil_image.size != (1000, 1500)) or (shape == "landscape" and pil_image.size != (1920, 1080)):
                     logger.debug("No Overlay: Image not standard overlay size")
                     return False
-        except UnidentifiedImageError:
-            logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
-            return None
 
-        target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE) # noqa
-        if target is None:
-            logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
-            return None
-        if target.shape[0] < 500 or target.shape[1] < 500:
-            logger.info(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
+            target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE) # noqa
+            if target is None:
+                logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
+                return None
+            if target.shape[0] < 500 or target.shape[1] < 500:
+                logger.info(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
+                return False
+            for overlay_image in overlay_images:
+                overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE) # noqa
+                if overlay is None:
+                    logger.error(f"Image Load Error: {overlay_image}", group=item_title)
+                    continue
+
+                if overlay.shape[0] > target.shape[0] or overlay.shape[1] > target.shape[1]:
+                    logger.error(f"Image Error: {overlay_image} is larger than {poster_source}: {out_path}", group=item_title)
+                    continue
+
+                template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED) # noqa
+                loc = numpy.where(template_result >= 0.95)
+
+                if len(loc[0]) == 0:
+                    continue
+                logger.debug(f"Overlay Detected: {overlay_image} found in {poster_source}: {out_path} with score {template_result.max()}")
+                return True
             return False
-        for overlay_image in overlay_images:
-            overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE) # noqa
-            if overlay is None:
-                logger.error(f"Image Load Error: {overlay_image}", group=item_title)
-                continue
-
-            if overlay.shape[0] > target.shape[0] or overlay.shape[1] > target.shape[1]:
-                logger.error(f"Image Error: {overlay_image} is larger than {poster_source}: {out_path}", group=item_title)
-                continue
-
-            template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED) # noqa
-            loc = numpy.where(template_result >= 0.95)
-
-            if len(loc[0]) == 0:
-                continue
-            logger.debug(f"Overlay Detected: {overlay_image} found in {poster_source}: {out_path} with score {template_result.max()}")
-            return True
-        return False
+        except Exception as er:
+            logger.separator()
+            logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
+            logger.stacktrace()
+            logger.critical(er, discord=True)
+            logger.separator()
+            return None
 
     def reset_from_plex(item_title, item_with_posters, shape, ignore=0):
         for p, plex_poster in enumerate(item_with_posters.posters(), 1):
