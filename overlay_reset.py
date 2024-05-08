@@ -142,7 +142,7 @@ try:
             img_path = util.download_image(url_path, config_dir)
             out_path = url_path
         try:
-            logger.trace(str(img_path))
+            logger.trace(f"{img_path}: {os.path.exists(img_path)}")
             with Image.open(img_path) as pil_image:
                 exif_tags = pil_image.getexif()
                 if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
@@ -152,8 +152,8 @@ try:
                     logger.debug("No Overlay: Image not standard overlay size")
                     return False
 
-            logger.trace(str(img_path))
-            target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE) # noqa
+            logger.trace(f"{img_path}: {os.path.exists(img_path)}")
+            target = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
             if target is None:
                 logger.error(f"Image Load Error: {poster_source}: {out_path}", group=item_title)
                 return None
@@ -161,7 +161,7 @@ try:
                 logger.info(f"Image Error: {poster_source}: Dimensions {target.shape[0]}x{target.shape[1]} must be greater then 500x500: {out_path}")
                 return False
             for overlay_image in overlay_images:
-                overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE) # noqa
+                overlay = cv2.imread(overlay_image, cv2.IMREAD_GRAYSCALE)
                 if overlay is None:
                     logger.error(f"Image Load Error: {overlay_image}", group=item_title)
                     continue
@@ -170,7 +170,7 @@ try:
                     logger.error(f"Image Error: {overlay_image} is larger than {poster_source}: {out_path}", group=item_title)
                     continue
 
-                template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED) # noqa
+                template_result = cv2.matchTemplate(target, overlay, cv2.TM_CCOEFF_NORMED)
                 loc = numpy.where(template_result >= 0.95)
 
                 if len(loc[0]) == 0:
@@ -281,12 +281,15 @@ try:
             else:
                 item_labels = [la.tag for la in plex_item.labels]
                 remove_labels = [la for la in labels if la in item_labels]
-                if not args["dry"]:
-                    for label in remove_labels:
-                        plex_item.removeLabel(label)
-                    logger.info(f"Labels Removed: {', '.join(remove_labels)}")
+                if remove_labels:
+                    if not args["dry"]:
+                        for label in remove_labels:
+                            plex_item.removeLabel(label)
+                        logger.info(f"Labels Removed: {', '.join(remove_labels)}")
+                    else:
+                        logger.info(f"Labels To Be Removed: {', '.join(remove_labels)}")
                 else:
-                    logger.info(f"Labels To Be Removed: {', '.join(remove_labels)}")
+                    logger.info("No Labels to Remove")
 
         # Upload poster and Remove "Overlay" Label
         if poster_source:
