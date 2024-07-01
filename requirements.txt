@@ -1,6 +1,6 @@
 numpy==1.26.4
 opencv-python==4.9.0.80
-pillow==10.3.0
+pillow==10.4.0
 PlexAPI==4.15.12
 kometautils==0.3.4
 requests==2.31.0
