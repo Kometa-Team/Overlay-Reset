@@ -41,13 +41,18 @@ These are high-level steps which assume the user has knowledge of python and pip
 ```shell
 git clone https://github.com/Kometa-Team/Overlay-Reset
 ```
-2. Install dependencies:
+2. Move into the script directory.
+
+```shell
+cd Overlay-Reset
+```
+3. Install dependencies (it's recommended to do this in a virtual environment):
 
 ```shell
 pip install -r requirements.txt
 ```
 
-3. If the above command fails, run the following command:
+4. If the above command fails, run the following command:
 
 ```shell
 pip install -r requirements.txt --ignore-installed
