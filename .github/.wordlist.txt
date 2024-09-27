@@ -1,0 +1,10 @@
+Dockerfile
+Dockerhub
+dockerfiles
+env
+Kometa
+Plex
+repo
+TMDb
+URl
+walkthroughs
