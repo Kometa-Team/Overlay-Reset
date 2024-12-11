@@ -22,7 +22,7 @@ except (ModuleNotFoundError, ImportError) as e:
 options = [
     {"arg": "u",  "key": "url",           "env": "PLEX_URL",        "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
     {"arg": "t",  "key": "token",         "env": "PLEX_TOKEN",      "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
-    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",    "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
+    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",    "type": "str",  "default": None,  "help": "Plex Library Names you want to reset. Can use a bar-separated (|) list."},
     {"arg": "a",  "key": "asset",         "env": "KOMETA_ASSET",    "type": "str",  "default": None,  "help": "Kometa Asset Folder to Scan for restoring posters."},
     {"arg": "o",  "key": "original",      "env": "KOMETA_ORIGINAL", "type": "str",  "default": None,  "help": "Kometa Original Folder to Scan for restoring posters."},
     {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",         "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
@@ -78,11 +78,19 @@ try:
         raise Failed("Plex Error: Plex token is invalid")
     except (requests.exceptions.ConnectionError, ParseError):
         raise Failed("Plex Error: Plex url is invalid")
-    lib = next((s for s in server.library.sections() if s.title == args["library"]), None)
-    if not lib:
-        raise Failed(f"Plex Error: Library: {args['library']} not found. Options: {', '.join([s.title for s in server.library.sections()])}")
-    if lib.type not in ["movie", "show"]:
-        raise Failed("Plex Error: Plex Library must be Movie or Show")
+    given_names = args["library"].split("|")
+    sections = {s.title: s for s in server.library.sections() if s.title in given_names}
+    if not sections:
+        raise Failed(f"Plex Error: No Libraries found with the given titles: {', '.join(given_names)}. Options: {', '.join([s.title for s in server.library.sections()])}")
+    libs = []
+    for n in given_names:
+        if n not in sections:
+            logger.error(f"Plex Error: Library: {n} not found and will be skipped. Options: {', '.join([s.title for s in server.library.sections()])}")
+        elif sections[n].type not in ["movie", "show"]:
+            logger.error(f"Plex Error: Plex Library: {n} ({sections[n].type}) must be Movie or Show and will be skipped.")
+        else:
+            logger.info(f"Plex Library: {n} will be Reset")
+            libs.append(sections[n])
 
     # Connect to TMDb
     tmdbapi = None
@@ -358,170 +366,173 @@ try:
     if not run_items and not start_from and not resume_rk:
         logger.separator("Resetting All Posters")
 
-    items = lib.all()
-    total_items = len(items)
-    for i, item in enumerate(items):
-        if run_items or start_from or resume_rk:
-            if (run_items and item.title not in run_items) or \
-                    (start_from and item.title != start_from) or \
-                    (resume_rk and str(item.ratingKey) != resume_rk):
-                logger.info(f"Skipping {i + 1}/{total_items} {item.title}")
+    total_libs = len(libs)
+    for li, lib in enumerate(libs):
+        logger.separator(f"Resetting Library ({li + 1}/{total_libs}): {lib.title}")
+        items = lib.all()
+        total_items = len(items)
+        for i, item in enumerate(items):
+            if run_items or start_from or resume_rk:
+                if (run_items and item.title not in run_items) or \
+                        (start_from and item.title != start_from) or \
+                        (resume_rk and str(item.ratingKey) != resume_rk):
+                    logger.info(f"Skipping {i + 1}/{total_items} {item.title}")
+                    continue
+                elif start_from:
+                    start_from = None
+                elif resume_rk:
+                    resume_rk = None
+            title = item.title
+            current_rk = item.ratingKey
+            logger.separator(f"Resetting {i + 1}/{total_items} {title}", start="reset")
+            try:
+                reload(item)
+            except Failed as e:
+                logger.error(e, group=title)
                 continue
-            elif start_from:
-                start_from = None
-            elif resume_rk:
-                resume_rk = None
-        title = item.title
-        current_rk = item.ratingKey
-        logger.separator(f"Resetting {i + 1}/{total_items} {title}", start="reset")
-        try:
-            reload(item)
-        except Failed as e:
-            logger.error(e, group=title)
-            continue
 
-        # Find Item's Kometa Asset Directory
-        item_asset_directory = None
-        asset_name = None
-        if args["asset"]:
-            if not item.locations:
-                logger.error(f"Asset Error: No video filepath found fo {title}", group=title)
-            else:
-                file_name = "poster"
-                path_test = str(item.locations[0])
-                if not os.path.dirname(path_test):
-                    path_test = path_test.replace("\\", "/")
-                asset_name = util.validate_filename(os.path.basename(os.path.dirname(path_test) if isinstance(item, Movie) else path_test))
-                if args["flat"]:
-                    item_asset_directory = args["asset"]
-                    file_name = asset_name
-                elif os.path.isdir(os.path.join(args["asset"], asset_name)):
-                    item_asset_directory = os.path.join(args["asset"], asset_name)
+            # Find Item's Kometa Asset Directory
+            item_asset_directory = None
+            asset_name = None
+            if args["asset"]:
+                if not item.locations:
+                    logger.error(f"Asset Error: No video filepath found fo {title}", group=title)
                 else:
-                    for n in range(1, 5):
-                        new_path = args["asset"]
-                        for m in range(1, n + 1):
-                            new_path = os.path.join(new_path, "*")
-                        matches = util.glob_filter(os.path.join(new_path, asset_name))
-                        if len(matches) > 0:
-                            item_asset_directory = os.path.abspath(matches[0])
-                            break
-                if not item_asset_directory:
-                    logger.warning(f"Asset Warning: No Asset Directory Found")
-
-        tmdb_item = None
-        if tmdbapi:
-            guid = requests.utils.urlparse(item.guid) # noqa
-            item_type = guid.scheme.split(".")[-1]
-            check_id = guid.netloc
-            tmdb_id = None
-            tvdb_id = None
-            imdb_id = None
-            if item_type == "plex":
-                for guid_tag in item.guids:
-                    url_parsed = requests.utils.urlparse(guid_tag.id) # noqa
-                    if url_parsed.scheme == "tvdb":
-                        tvdb_id = int(url_parsed.netloc)
-                    elif url_parsed.scheme == "imdb":
-                        imdb_id = url_parsed.netloc
-                    elif url_parsed.scheme == "tmdb":
-                        tmdb_id = int(url_parsed.netloc)
-                if not tvdb_id and not imdb_id and not tmdb_id:
-                    item.refresh()
-            elif item_type == "imdb":
-                imdb_id = check_id
-            elif item_type == "thetvdb":
-                tvdb_id = int(check_id)
-            elif item_type == "themoviedb":
-                tmdb_id = int(check_id)
-            elif item_type in ["xbmcnfo", "xbmcnfotv"]:
-                if len(check_id) > 10:
-                    logger.warning(f"XMBC NFO Local ID: {check_id}")
-                try:
-                    if item_type == "xbmcnfo":
-                        tmdb_id = int(check_id)
+                    file_name = "poster"
+                    path_test = str(item.locations[0])
+                    if not os.path.dirname(path_test):
+                        path_test = path_test.replace("\\", "/")
+                    asset_name = util.validate_filename(os.path.basename(os.path.dirname(path_test) if isinstance(item, Movie) else path_test))
+                    if args["flat"]:
+                        item_asset_directory = args["asset"]
+                        file_name = asset_name
+                    elif os.path.isdir(os.path.join(args["asset"], asset_name)):
+                        item_asset_directory = os.path.join(args["asset"], asset_name)
                     else:
-                        tvdb_id = int(check_id)
-                except ValueError:
+                        for n in range(1, 5):
+                            new_path = args["asset"]
+                            for m in range(1, n + 1):
+                                new_path = os.path.join(new_path, "*")
+                            matches = util.glob_filter(os.path.join(new_path, asset_name))
+                            if len(matches) > 0:
+                                item_asset_directory = os.path.abspath(matches[0])
+                                break
+                    if not item_asset_directory:
+                        logger.warning(f"Asset Warning: No Asset Directory Found")
+
+            tmdb_item = None
+            if tmdbapi:
+                guid = requests.utils.urlparse(item.guid) # noqa
+                item_type = guid.scheme.split(".")[-1]
+                check_id = guid.netloc
+                tmdb_id = None
+                tvdb_id = None
+                imdb_id = None
+                if item_type == "plex":
+                    for guid_tag in item.guids:
+                        url_parsed = requests.utils.urlparse(guid_tag.id) # noqa
+                        if url_parsed.scheme == "tvdb":
+                            tvdb_id = int(url_parsed.netloc)
+                        elif url_parsed.scheme == "imdb":
+                            imdb_id = url_parsed.netloc
+                        elif url_parsed.scheme == "tmdb":
+                            tmdb_id = int(url_parsed.netloc)
+                    if not tvdb_id and not imdb_id and not tmdb_id:
+                        item.refresh()
+                elif item_type == "imdb":
                     imdb_id = check_id
-            if not tvdb_id and not imdb_id and not tmdb_id:
-                logger.error("Plex Error: No External GUIDs found", group=title)
-            if not tmdb_id and imdb_id:
-                try:
-                    results = tmdbapi.find_by_id(imdb_id=imdb_id)
-                    if results.movie_results and isinstance(item, Movie):
-                        tmdb_id = results.movie_results[0].id
-                    elif results.tv_results and isinstance(item, Show):
-                        tmdb_id = results.tv_results[0].id
-                except TMDbException as e:
-                    logger.warning(e, group=title)
-            if not tmdb_id and tvdb_id and isinstance(item, Show):
-                try:
-                    results = tmdbapi.find_by_id(tvdb_id=tvdb_id)
-                    if results.tv_results:
-                        tmdb_id = results.tv_results[0].id
-                except TMDbException as e:
-                    logger.warning(e, group=title)
-            if tmdb_id:
-                try:
-                    tmdb_item = tmdbapi.movie(tmdb_id) if isinstance(item, Movie) else tmdbapi.tv_show(tmdb_id)
-                except TMDbException as e:
-                    logger.error(f"TMDb Error: {e}", group=title)
-            else:
-                logger.error("Plex Error: TMDb ID Not Found", group=title)
-
-        if not args["no-main"]:
-            reset_poster(title, item, tmdb_item.poster_url if tmdb_item else None, item_asset_directory, asset_name if args["flat"] else "poster")
-
-        logger.info(f"Runtime: {logger.runtime('reset')}")
-
-        if isinstance(item, Show) and (args["season"] or args["episode"]):
-            tmdb_seasons = {s.season_number: s for s in tmdb_item.seasons} if tmdb_item else {}
-            for season in item.seasons():
-                title = f"Season {season.seasonNumber}"
-                title = title if title == season.title else f"{title}: {season.title}"
-                title = f"{item.title}\n {title}"
-                if args["season"]:
-                    logger.separator(f"Resetting {title}", start="reset")
+                elif item_type == "thetvdb":
+                    tvdb_id = int(check_id)
+                elif item_type == "themoviedb":
+                    tmdb_id = int(check_id)
+                elif item_type in ["xbmcnfo", "xbmcnfotv"]:
+                    if len(check_id) > 10:
+                        logger.warning(f"XMBC NFO Local ID: {check_id}")
                     try:
-                        reload(season)
-                    except Failed as e:
-                        logger.error(e, group=title)
-                        continue
-                    tmdb_poster = tmdb_seasons[season.seasonNumber].poster_url if season.seasonNumber in tmdb_seasons else None
-                    file_name = f"Season{'0' if not season.seasonNumber or season.seasonNumber < 10 else ''}{season.seasonNumber}"
-                    reset_poster(title, season, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if args["flat"] else file_name, parent=item)
+                        if item_type == "xbmcnfo":
+                            tmdb_id = int(check_id)
+                        else:
+                            tvdb_id = int(check_id)
+                    except ValueError:
+                        imdb_id = check_id
+                if not tvdb_id and not imdb_id and not tmdb_id:
+                    logger.error("Plex Error: No External GUIDs found", group=title)
+                if not tmdb_id and imdb_id:
+                    try:
+                        results = tmdbapi.find_by_id(imdb_id=imdb_id)
+                        if results.movie_results and isinstance(item, Movie):
+                            tmdb_id = results.movie_results[0].id
+                        elif results.tv_results and isinstance(item, Show):
+                            tmdb_id = results.tv_results[0].id
+                    except TMDbException as e:
+                        logger.warning(e, group=title)
+                if not tmdb_id and tvdb_id and isinstance(item, Show):
+                    try:
+                        results = tmdbapi.find_by_id(tvdb_id=tvdb_id)
+                        if results.tv_results:
+                            tmdb_id = results.tv_results[0].id
+                    except TMDbException as e:
+                        logger.warning(e, group=title)
+                if tmdb_id:
+                    try:
+                        tmdb_item = tmdbapi.movie(tmdb_id) if isinstance(item, Movie) else tmdbapi.tv_show(tmdb_id)
+                    except TMDbException as e:
+                        logger.error(f"TMDb Error: {e}", group=title)
+                else:
+                    logger.error("Plex Error: TMDb ID Not Found", group=title)
 
-                    logger.info(f"Runtime: {logger.runtime('reset')}")
+            if not args["no-main"]:
+                reset_poster(title, item, tmdb_item.poster_url if tmdb_item else None, item_asset_directory, asset_name if args["flat"] else "poster")
 
-                if args["episode"]:
-                    if not args["season"]:
+            logger.info(f"Runtime: {logger.runtime('reset')}")
+
+            if isinstance(item, Show) and (args["season"] or args["episode"]):
+                tmdb_seasons = {s.season_number: s for s in tmdb_item.seasons} if tmdb_item else {}
+                for season in item.seasons():
+                    title = f"Season {season.seasonNumber}"
+                    title = title if title == season.title else f"{title}: {season.title}"
+                    title = f"{item.title}\n {title}"
+                    if args["season"]:
+                        logger.separator(f"Resetting {title}", start="reset")
                         try:
                             reload(season)
                         except Failed as e:
                             logger.error(e, group=title)
                             continue
-                    tmdb_episodes = {}
-                    if season.seasonNumber in tmdb_seasons:
-                        for episode in tmdb_seasons[season.seasonNumber].episodes:
-                            episode._partial = False
-                            try:
-                                tmdb_episodes[episode.episode_number] = episode
-                            except TMDbException:
-                                logger.error(f"TMDb Error: An Episode of Season {season.seasonNumber} was Not Found", group=title)
+                        tmdb_poster = tmdb_seasons[season.seasonNumber].poster_url if season.seasonNumber in tmdb_seasons else None
+                        file_name = f"Season{'0' if not season.seasonNumber or season.seasonNumber < 10 else ''}{season.seasonNumber}"
+                        reset_poster(title, season, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if args["flat"] else file_name, parent=item)
 
-                    for episode in season.episodes():
-                        title = f"{item.title}\nEpisode {episode.seasonEpisode.upper()}: {episode.title}"
-                        logger.separator(f"Resetting {title}", start="reset")
-                        try:
-                            reload(episode)
-                        except Failed as e:
-                            logger.error(e, group=title)
-                            continue
-                        tmdb_poster = tmdb_episodes[episode.episodeNumber].still_url if episode.episodeNumber in tmdb_episodes else None
-                        file_name = episode.seasonEpisode.upper()
-                        reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if args["flat"] else file_name, shape="landscape")
                         logger.info(f"Runtime: {logger.runtime('reset')}")
+
+                    if args["episode"]:
+                        if not args["season"]:
+                            try:
+                                reload(season)
+                            except Failed as e:
+                                logger.error(e, group=title)
+                                continue
+                        tmdb_episodes = {}
+                        if season.seasonNumber in tmdb_seasons:
+                            for episode in tmdb_seasons[season.seasonNumber].episodes:
+                                episode._partial = False
+                                try:
+                                    tmdb_episodes[episode.episode_number] = episode
+                                except TMDbException:
+                                    logger.error(f"TMDb Error: An Episode of Season {season.seasonNumber} was Not Found", group=title)
+
+                        for episode in season.episodes():
+                            title = f"{item.title}\nEpisode {episode.seasonEpisode.upper()}: {episode.title}"
+                            logger.separator(f"Resetting {title}", start="reset")
+                            try:
+                                reload(episode)
+                            except Failed as e:
+                                logger.error(e, group=title)
+                                continue
+                            tmdb_poster = tmdb_episodes[episode.episodeNumber].still_url if episode.episodeNumber in tmdb_episodes else None
+                            file_name = episode.seasonEpisode.upper()
+                            reset_poster(title, episode, tmdb_poster, item_asset_directory, f"{asset_name}_{file_name}" if args["flat"] else file_name, shape="landscape")
+                            logger.info(f"Runtime: {logger.runtime('reset')}")
 
     current_rk = None
 except Failed as e:
