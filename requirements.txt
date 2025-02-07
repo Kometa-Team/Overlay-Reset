@@ -1,5 +1,5 @@
 numpy==2.2.0
-opencv-python==4.10.0.84
+opencv-python==4.11.0.86
 pillow==10.4.0
 PlexAPI==4.16.0
 kometautils==0.3.4
