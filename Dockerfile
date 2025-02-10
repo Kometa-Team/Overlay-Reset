@@ -1,9 +1,9 @@
 FROM python:3.11-slim-buster
 ARG BRANCH_NAME=master
-ENV BRANCH_NAME ${BRANCH_NAME}
-ENV TINI_VERSION v0.19.0
-ENV KOMETA_DOCKER True
-COPY . /
+ENV BRANCH_NAME=${BRANCH_NAME}
+ENV TINI_VERSION=v0.19.0
+ENV KOMETA_DOCKER=True
+COPY requirements.txt requirements.txt
 RUN echo "**** install system packages ****" \
  && apt-get update \
  && apt-get upgrade -y --no-install-recommends \
@@ -19,5 +19,6 @@ RUN echo "**** install system packages ****" \
  && apt-get -f install \
  && apt-get autoclean \
  && rm -rf /requirements.txt /tmp/* /var/tmp/* /var/lib/apt/lists/*
+COPY . /
 VOLUME /config
 ENTRYPOINT ["/tini", "-s", "python3", "overlay_reset.py", "--"]

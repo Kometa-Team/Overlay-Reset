@@ -1,10 +1,11 @@
-Dockerfile
-Dockerhub
+dockerfile
 dockerfiles
+dockerhub
 env
-Kometa
-Plex
+kometa
+plex
 repo
-TMDb
-URl
+ssl
+tmdb
+url
 walkthroughs
