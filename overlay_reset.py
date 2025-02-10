@@ -70,7 +70,13 @@ try:
     if not args["library"]:
         raise Failed("Error: No Plex Library Name Provided")
     try:
-        server = PlexServer(args["url"], args["token"], timeout=args["timeout"])
+        session = requests.session()
+        if args["no-verify-ssl"]:
+            session.verify = False
+            if session.verify is False:
+                import urllib3
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        server = PlexServer(args["url"], args["token"], timeout=args["timeout"], session=session)
         plexapi.server.TIMEOUT = args["timeout"]
         os.environ["PLEXAPI_PLEXAPI_TIMEOUT"] = str(args["timeout"])
         logger.info("Plex Connection Successful")
