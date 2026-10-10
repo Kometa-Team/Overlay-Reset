@@ -20,26 +20,26 @@ except (ModuleNotFoundError, ImportError) as e:
     sys.exit(0)
 
 options = [
-    {"arg": "u",  "key": "url",           "env": "PLEX_URL",        "type": "str",  "default": None,  "help": "Plex URL of the Server you want to connect to."},
-    {"arg": "t",  "key": "token",         "env": "PLEX_TOKEN",      "type": "str",  "default": None,  "help": "Plex Token of the Server you want to connect to."},
-    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",    "type": "str",  "default": None,  "help": "Plex Library Name you want to reset."},
-    {"arg": "a",  "key": "asset",         "env": "KOMETA_ASSET",    "type": "str",  "default": None,  "help": "Kometa Asset Folder to Scan for restoring posters. Can use a pipe-separated (|) list."},
-    {"arg": "o",  "key": "original",      "env": "KOMETA_ORIGINAL", "type": "str",  "default": None,  "help": "Kometa Original Folder to Scan for restoring posters."},
-    {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",         "type": "str",  "default": None,  "help": "TMDb V3 API Key for restoring posters from TMDb."},
-    {"arg": "st", "key": "start",         "env": "START",           "type": "str",  "default": None,  "help": "Plex Item Title to Start restoring posters from."},
-    {"arg": "it", "key": "items",         "env": "ITEMS",           "type": "str",  "default": None,  "help": "Restore specific Plex Items by Title. Can use a pipe-separated (|) list."},
-    {"arg": "lb", "key": "labels",        "env": "LABELS",          "type": "str",  "default": None,  "help": "Additional labels to remove. Can use a pipe-separated (|) list."},
-    {"arg": "di", "key": "discord",       "env": "DISCORD",         "type": "str",  "default": None,  "help": "Webhook URL to channel for Notifications."},
-    {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",         "type": "int",  "default": 600,   "help": "Timeout can be any number greater then 0. (Default: 600)"},
-    {"arg": "d",  "key": "dry",           "env": "DRY_RUN",         "type": "bool", "default": False, "help": "Run as a Dry Run without making changes in Plex."},
-    {"arg": "f",  "key": "flat",          "env": "KOMETA_FLAT",     "type": "bool", "default": False, "help": "Kometa Asset Folder uses Flat Assets Image Paths."},
-    {"arg": "nm", "key": "no-main",       "env": "NO_MAIN",         "type": "bool", "default": False, "help": "Do not restore the Main Movie/Show posters during run."},
-    {"arg": "s",  "key": "season",        "env": "SEASON",          "type": "bool", "default": False, "help": "Restore Season posters during run."},
-    {"arg": "e",  "key": "episode",       "env": "EPISODE",         "type": "bool", "default": False, "help": "Restore Episode posters during run."},
-    {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME",   "type": "bool", "default": None,  "help": "Ignores the automatic resume."},
-    {"arg": "tr", "key": "trace",         "env": "TRACE",           "type": "bool", "default": False, "help": "Run with extra trace logs."},
-    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",    "type": "bool", "default": False, "help": "Run with every request logged."},
-    {"arg": "nv", "key": "no-verify-ssl",  "env": "NO_VERIFY_SSL",    "type": "bool", "default": False, "help": "Turn off SSL."}
+    {"arg": "u",  "key": "url",           "env": "PLEX_URL",        "type": "str",  "default": None,  "help": "Specify the Plex server URL."},
+    {"arg": "t",  "key": "token",         "env": "PLEX_TOKEN",      "type": "str",  "default": None,  "help": "Specify the Plex authentication token."},
+    {"arg": "l",  "key": "library",       "env": "PLEX_LIBRARY",    "type": "str",  "default": None,  "help": "Specify the Plex library to reset."},
+    {"arg": "a",  "key": "asset",         "env": "KOMETA_ASSET",    "type": "str",  "default": None,  "help": "Specify Kometa asset folders to scan when restoring posters. Separate multiple folders with |."},
+    {"arg": "o",  "key": "original",      "env": "KOMETA_ORIGINAL", "type": "str",  "default": None,  "help": "Specify the Kometa Original folder to scan when restoring posters."},
+    {"arg": "ta", "key": "tmdbapi",       "env": "TMDBAPI",         "type": "str",  "default": None,  "help": "Specify the TMDb v3 API key used to restore posters."},
+    {"arg": "st", "key": "start",         "env": "START",           "type": "str",  "default": None,  "help": "Start restoring posters at this Plex item title."},
+    {"arg": "it", "key": "items",         "env": "ITEMS",           "type": "str",  "default": None,  "help": "Restore only these Plex items by title. Separate multiple titles with |."},
+    {"arg": "lb", "key": "labels",        "env": "LABELS",          "type": "str",  "default": None,  "help": "Remove these additional labels. Separate multiple labels with |."},
+    {"arg": "di", "key": "discord",       "env": "DISCORD",         "type": "str",  "default": None,  "help": "Specify the Discord webhook URL for notifications."},
+    {"arg": "ti", "key": "timeout",       "env": "TIMEOUT",         "type": "int",  "default": 600,   "help": "Set the request timeout in seconds. Must be greater than 0. Default: 600."},
+    {"arg": "d",  "key": "dry",           "env": "DRY_RUN",         "type": "bool", "default": False, "help": "Preview changes without updating Plex."},
+    {"arg": "f",  "key": "flat",          "env": "KOMETA_FLAT",     "type": "bool", "default": False, "help": "Use flat Kometa asset paths."},
+    {"arg": "nm", "key": "no-main",       "env": "NO_MAIN",         "type": "bool", "default": False, "help": "Skip restoring main movie and show posters."},
+    {"arg": "s",  "key": "season",        "env": "SEASON",          "type": "bool", "default": False, "help": "Restore season posters."},
+    {"arg": "e",  "key": "episode",       "env": "EPISODE",         "type": "bool", "default": False, "help": "Restore episode posters."},
+    {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME",   "type": "bool", "default": None,  "help": "Ignore automatic resume."},
+    {"arg": "tr", "key": "trace",         "env": "TRACE",           "type": "bool", "default": False, "help": "Enable trace logging."},
+    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",    "type": "bool", "default": False, "help": "Log every request."},
+    {"arg": "nv", "key": "no-verify-ssl", "env": "NO_VERIFY_SSL",   "type": "bool", "default": False, "help": "Disable SSL certificate verification."}
 ]
 script_name = "Overlay Reset"
 base_dir = os.path.dirname(os.path.abspath(__file__))
