@@ -1,4 +1,4 @@
-FROM python:3.11-slim-bookworm
+FROM python:3.12-slim-bookworm
 ARG BRANCH_NAME=master
 ENV BRANCH_NAME=${BRANCH_NAME}
 ENV TINI_VERSION=v0.19.0
