@@ -38,7 +38,8 @@ options = [
     {"arg": "e",  "key": "episode",       "env": "EPISODE",         "type": "bool", "default": False, "help": "Restore Episode posters during run."},
     {"arg": "ir", "key": "ignore-resume", "env": "IGNORE_RESUME",   "type": "bool", "default": None,  "help": "Ignores the automatic resume."},
     {"arg": "tr", "key": "trace",         "env": "TRACE",           "type": "bool", "default": False, "help": "Run with extra trace logs."},
-    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",    "type": "bool", "default": False, "help": "Run with every request logged."}
+    {"arg": "lr", "key": "log-requests",  "env": "LOG_REQUESTS",    "type": "bool", "default": False, "help": "Run with every request logged."},
+    {"arg": "nv", "key": "no-verify-ssl",  "env": "NO_VERIFY_SSL",    "type": "bool", "default": False, "help": "Turn off SSL."}
 ]
 script_name = "Overlay Reset"
 base_dir = os.path.dirname(os.path.abspath(__file__))
