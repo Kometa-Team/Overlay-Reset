@@ -11,7 +11,7 @@
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/meisnate12?color=%238a2be2&style=plastic)](https://github.com/sponsors/meisnate12)
 [![Sponsor or Donate](https://img.shields.io/badge/-Sponsor%2FDonate-blueviolet?style=plastic)](https://github.com/sponsors/meisnate12)
 
-Kometa Overlay Reset is an open source Python 3 project that has been created to Remove all Overlays placed on a Plex Library.
+Kometa Overlay Reset is an open source Python 3 project that has been created to remove all Overlays placed on a Plex Library.
 
 ## Installing Kometa Overlay Reset
 
