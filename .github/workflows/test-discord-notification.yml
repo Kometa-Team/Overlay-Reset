@@ -1,0 +1,16 @@
+name: Test Discord notification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send test notification
+        uses: Kometa-Team/discord-notifications@ad0df53492be8cf81192f3753435b2f72667a857
+        with:
+          webhook_id_token: ${{ secrets.DISCORD_WEBHOOK_TEST }}
+          title: "Overlay Reset test"
+          message: "✅ Discord notifications are working."
+          color: 5763719
