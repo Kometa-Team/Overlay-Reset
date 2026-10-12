@@ -72,6 +72,8 @@ jobs:
 
   docker-build-pull:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     needs: [ validate-pull ]
     if: needs.validate-pull.outputs.build == 'true' && contains(github.event.pull_request.labels.*.name, 'docker')
     outputs:
@@ -162,7 +164,7 @@ jobs:
           push: true
           tags: ${{ vars.DOCKER_TEAM }}/${{ vars.DOCKER_REPO }}:${{ steps.update-version.outputs.tag-name }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min
 
       - name: Discord Success Notification
         uses: Kometa-Team/discord-notifications@master
